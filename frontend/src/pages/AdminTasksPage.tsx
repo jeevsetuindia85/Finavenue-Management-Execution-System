@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   ClipboardList,
   Plus,
@@ -23,6 +24,7 @@ import { api } from '../services/api';
 import { Activity, User as UserType } from '../types';
 
 export const AdminTasksPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [tasks, setTasks] = useState<Activity[]>([]);
   const [users, setUsers] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -87,6 +89,17 @@ export const AdminTasksPage: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    const statusParam = searchParams.get('status');
+    if (statusParam) {
+      setStatusFilter(statusParam);
+    }
+    const searchParam = searchParams.get('search');
+    if (searchParam) {
+      setSearchQuery(searchParam);
+    }
+  }, [searchParams]);
 
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();

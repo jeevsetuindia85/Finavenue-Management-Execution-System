@@ -9,7 +9,8 @@ import {
   LogOut,
   CheckCircle2,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  ChevronRight
 } from 'lucide-react';
 import { User, Notification } from '../../types';
 import { api } from '../../services/api';
@@ -69,6 +70,146 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onUserSwitch }) => 
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/activities?search=${encodeURIComponent(searchQuery)}`);
+    }
+  };
+
+  const handleNotificationClick = async (notif: Notification) => {
+    // 1. Mark as read in backend
+    try {
+      if (!notif.is_read) {
+        await api.markNotificationRead(notif.id);
+        fetchNotifs();
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    // 2. Close dropdown popover
+    setShowNotifications(false);
+
+    // 3. User role & context
+    const isEmployee = currentUser?.role === 'team_member';
+    const type = (notif.type || '').toLowerCase();
+    const entityType = (notif.related_entity_type || '').toLowerCase();
+    const title = (notif.title || '').toLowerCase();
+    const message = (notif.message || '').toLowerCase();
+
+    // 4. Intelligent contextual routing:
+    // Work submitted for review -> Admin Central Tasks (filtered to under_review)
+    if (
+      type.includes('task_submitted') ||
+      title.includes('submitted for review') ||
+      message.includes('submitted work for review')
+    ) {
+      if (isEmployee) {
+        navigate('/my-submissions');
+      } else {
+        navigate('/admin/tasks?status=under_review');
+      }
+      return;
+    }
+
+    // Task assignment / task update / overdue
+    if (entityType === 'activity' || type.includes('task') || type.includes('overdue')) {
+      if (isEmployee) {
+        navigate('/my-tasks');
+      } else {
+        navigate('/admin/tasks');
+      }
+      return;
+    }
+
+    // Hiring / Agency follow-up
+    if (
+      entityType === 'hiring_agency' ||
+      type.includes('agency') ||
+      title.includes('agency') ||
+      message.includes('agency') ||
+      title.includes('candidate') ||
+      title.includes('hiring')
+    ) {
+      if (!isEmployee) {
+        navigate('/hiring');
+      } else {
+        navigate('/my-tasks');
+      }
+      return;
+    }
+
+    // Expansion / Office / Site visit
+    if (
+      entityType === 'office_location' ||
+      type.includes('expansion') ||
+      type.includes('site_visit') ||
+      title.includes('site visit') ||
+      title.includes('expansion') ||
+      title.includes('office')
+    ) {
+      if (!isEmployee) {
+        navigate('/expansion');
+      } else {
+        navigate('/my-tasks');
+      }
+      return;
+    }
+
+    // Product initiatives
+    if (
+      entityType === 'product' ||
+      type.includes('product') ||
+      title.includes('product') ||
+      title.includes('pms') ||
+      title.includes('aif')
+    ) {
+      if (!isEmployee) {
+        navigate('/products');
+      } else {
+        navigate('/my-tasks');
+      }
+      return;
+    }
+
+    // Weekly reviews
+    if (
+      entityType === 'review' ||
+      type.includes('review') ||
+      title.includes('review') ||
+      message.includes('review')
+    ) {
+      if (!isEmployee) {
+        navigate('/reviews');
+      } else {
+        navigate('/my-tasks');
+      }
+      return;
+    }
+
+    // Calendar
+    if (entityType === 'calendar' || type.includes('calendar') || title.includes('calendar')) {
+      navigate('/calendar');
+      return;
+    }
+
+    // User / Team management
+    if (
+      entityType === 'user' ||
+      type.includes('user') ||
+      title.includes('employee') ||
+      title.includes('account')
+    ) {
+      if (!isEmployee) {
+        navigate('/admin/team');
+      } else {
+        navigate('/my-profile');
+      }
+      return;
+    }
+
+    // Fallback based on role
+    if (isEmployee) {
+      navigate('/my-tasks');
+    } else {
+      navigate('/admin/tasks');
     }
   };
 
@@ -134,57 +275,90 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onUserSwitch }) => 
           </button>
 
           {showNotifications && (
-            <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-slate-200 py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-              <div className="flex items-center justify-between px-4 pb-2 border-b border-slate-100">
-                <span className="font-semibold text-sm text-slate-800 flex items-center gap-1.5">
-                  <Bell size={15} className="text-teal-600" />
-                  Notifications & Alerts
-                </span>
-                {unreadCount > 0 && (
-                  <button
-                    onClick={handleMarkAllRead}
-                    className="text-xs text-teal-600 hover:text-teal-700 font-medium"
-                  >
-                    Mark all read
-                  </button>
-                )}
-              </div>
-              <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
-                {notifications.length === 0 ? (
-                  <div className="py-8 text-center text-xs text-slate-400">
-                    No active notifications
-                  </div>
-                ) : (
-                  notifications.map((notif) => (
-                    <div
-                      key={notif.id}
-                      className={`p-3 text-xs hover:bg-slate-50 transition cursor-pointer ${
-                        !notif.is_read ? 'bg-teal-50/40' : ''
-                      }`}
-                      onClick={async () => {
-                        await api.markNotificationRead(notif.id);
-                        fetchNotifs();
-                      }}
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setShowNotifications(false)}
+              />
+              <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-slate-200 py-3 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
+                <div className="flex items-center justify-between px-4 pb-2 border-b border-slate-100">
+                  <span className="font-semibold text-sm text-slate-800 flex items-center gap-1.5">
+                    <Bell size={15} className="text-teal-600" />
+                    Notifications & Alerts
+                  </span>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={handleMarkAllRead}
+                      className="text-xs text-teal-600 hover:text-teal-700 font-medium"
                     >
-                      <div className="flex items-start gap-2">
-                        {notif.type.includes('overdue') || notif.type.includes('missed') ? (
-                          <AlertTriangle size={14} className="text-rose-500 shrink-0 mt-0.5" />
-                        ) : (
-                          <CheckCircle2 size={14} className="text-teal-500 shrink-0 mt-0.5" />
-                        )}
-                        <div className="flex-1">
-                          <p className="font-medium text-slate-800">{notif.title}</p>
-                          <p className="text-slate-500 mt-0.5">{notif.message}</p>
-                          <span className="text-[10px] text-slate-400 mt-1 block">
-                            {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                      </div>
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+                <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                  {notifications.length === 0 ? (
+                    <div className="py-8 text-center text-xs text-slate-400">
+                      No active notifications
                     </div>
-                  ))
-                )}
+                  ) : (
+                    notifications.map((notif) => {
+                      const isEmployee = currentUser?.role === 'team_member';
+                      const type = (notif.type || '').toLowerCase();
+                      const title = (notif.title || '').toLowerCase();
+                      const entityType = (notif.related_entity_type || '').toLowerCase();
+                      
+                      let targetLabel = isEmployee ? 'My Tasks' : 'Central Tasks';
+                      if (type.includes('task_submitted') || title.includes('submitted for review')) {
+                        targetLabel = isEmployee ? 'My Submissions' : 'Review Work';
+                      } else if (entityType === 'hiring_agency' || title.includes('agency') || title.includes('hiring')) {
+                        targetLabel = 'Hiring';
+                      } else if (entityType === 'office_location' || title.includes('site visit') || title.includes('expansion')) {
+                        targetLabel = 'Expansion';
+                      } else if (entityType === 'product' || title.includes('product')) {
+                        targetLabel = 'Products';
+                      } else if (entityType === 'review' || title.includes('review')) {
+                        targetLabel = 'Reviews';
+                      }
+
+                      return (
+                        <div
+                          key={notif.id}
+                          className={`p-3 text-xs hover:bg-slate-50/90 active:bg-slate-100 transition cursor-pointer group ${
+                            !notif.is_read ? 'bg-teal-50/40' : ''
+                          }`}
+                          onClick={() => handleNotificationClick(notif)}
+                        >
+                          <div className="flex items-start gap-2.5">
+                            {notif.type.includes('overdue') || notif.type.includes('missed') ? (
+                              <AlertTriangle size={15} className="text-rose-500 shrink-0 mt-0.5" />
+                            ) : (
+                              <CheckCircle2 size={15} className="text-teal-500 shrink-0 mt-0.5" />
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center justify-between gap-1">
+                                <p className="font-semibold text-slate-800 truncate">{notif.title}</p>
+                                <span className="text-[10px] text-teal-700 font-bold bg-teal-50 px-1.5 py-0.5 rounded border border-teal-200/60 opacity-80 group-hover:opacity-100 transition flex items-center shrink-0">
+                                  {targetLabel} <ChevronRight size={10} className="ml-0.5" />
+                                </span>
+                              </div>
+                              <p className="text-slate-600 mt-0.5 line-clamp-2 leading-relaxed">{notif.message}</p>
+                              <div className="flex items-center justify-between mt-1.5 pt-1 border-t border-slate-100/60 text-[10px]">
+                                <span className="text-slate-400">
+                                  {new Date(notif.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                                <span className="text-teal-600 font-semibold group-hover:underline flex items-center gap-0.5">
+                                  Go to details &rarr;
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
               </div>
-            </div>
+            </>
           )}
         </div>
 

@@ -32,14 +32,14 @@ async def seed():
         
         print("Seeding demo users...")
         users = [
-            User(email="admin@mes.local", hashed_password=get_password_hash("admin123"), full_name="System Admin", role="admin", job_title="Platform Admin"),
-            User(email="ceo@mes.local", hashed_password=get_password_hash("demo1234"), full_name="Rajesh Mehta", role="management", job_title="CEO"),
-            User(email="hr@mes.local", hashed_password=get_password_hash("demo1234"), full_name="Priya Sharma", role="goal_owner", job_title="Head of Talent"),
-            User(email="bd@mes.local", hashed_password=get_password_hash("demo1234"), full_name="Amit Patel", role="goal_owner", job_title="Head of Business Development"),
-            User(email="product@mes.local", hashed_password=get_password_hash("demo1234"), full_name="Sneha Reddy", role="goal_owner", job_title="Head of Products"),
-            User(email="maitwayi@mes.local", hashed_password=get_password_hash("demo1234"), full_name="Maitwayi Desai", role="coordinator", job_title="Execution Coordinator"),
-            User(email="analyst1@mes.local", hashed_password=get_password_hash("demo1234"), full_name="Vikram Singh", role="team_member", job_title="Senior Analyst"),
-            User(email="recruiter@mes.local", hashed_password=get_password_hash("demo1234"), full_name="Ananya Iyer", role="team_member", job_title="Talent Acquisition Specialist"),
+            User(email="admin@mes.local", employee_id="FA-ADM-001", username="admin", department="Management", designation="Platform Super Admin", hashed_password=get_password_hash("admin123"), full_name="System Admin", role="admin", job_title="Platform Admin", status="active"),
+            User(email="ceo@mes.local", employee_id="FA-EXEC-001", username="rajesh.mehta", department="Executive", designation="Chief Executive Officer", hashed_password=get_password_hash("demo1234"), full_name="Rajesh Mehta", role="management", job_title="CEO", status="active"),
+            User(email="hr@mes.local", employee_id="FA-HR-001", username="priya.hr", department="Human Resources", designation="Head of Talent Acquisition", hashed_password=get_password_hash("demo1234"), full_name="Priya Sharma", role="goal_owner", job_title="Head of Talent", status="active"),
+            User(email="bd@mes.local", employee_id="FA-BD-001", username="amit.bd", department="Business Development", designation="Head of Geographic Expansion", hashed_password=get_password_hash("demo1234"), full_name="Amit Patel", role="goal_owner", job_title="Head of Business Development", status="active"),
+            User(email="product@mes.local", employee_id="FA-PRD-001", username="sneha.product", department="Product Management", designation="Head of PMS & AIF Products", hashed_password=get_password_hash("demo1234"), full_name="Sneha Reddy", role="goal_owner", job_title="Head of Products", status="active"),
+            User(email="maitwayi@mes.local", employee_id="FA-COORD-001", username="maitwayi.desai", department="Operations", designation="Execution Coordinator", hashed_password=get_password_hash("demo1234"), full_name="Maitwayi Desai", role="coordinator", job_title="Execution Coordinator", status="active"),
+            User(email="analyst1@mes.local", employee_id="FA-EMP-001", username="vikram.analyst", department="Research", designation="Senior Research Analyst", hashed_password=get_password_hash("demo1234"), full_name="Vikram Singh", role="team_member", job_title="Senior Analyst", status="active"),
+            User(email="recruiter@mes.local", employee_id="FA-EMP-002", username="ananya.recruiter", department="Human Resources", designation="Talent Acquisition Specialist", hashed_password=get_password_hash("demo1234"), full_name="Ananya Iyer", role="team_member", job_title="Talent Acquisition Specialist", status="active"),
         ]
         for u in users:
             db.add(u)

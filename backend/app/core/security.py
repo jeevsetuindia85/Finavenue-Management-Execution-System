@@ -20,9 +20,15 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/lo
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     try:
-        return pwd_context.verify(plain_password, hashed_password)
+        if pwd_context.verify(plain_password, hashed_password):
+            return True
     except Exception as e:
         print(f"verify_password warning: {e}", flush=True)
+    try:
+        import bcrypt
+        return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
+    except Exception as e2:
+        print(f"bcrypt checkpw fallback warning: {e2}", flush=True)
         return False
 
 def get_password_hash(password: str) -> str:

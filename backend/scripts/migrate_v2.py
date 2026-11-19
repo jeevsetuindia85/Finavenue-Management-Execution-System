@@ -68,7 +68,7 @@ def run_migration(db_path: str):
     )
     """)
 
-    # 5. Populate employee IDs and designations for existing users if null
+    # 5. Populate employee IDs and designations for existing users
     defaults = [
         ("admin@mes.local", "FA-ADM-001", "admin", "Management", "Platform Super Admin"),
         ("ceo@mes.local", "FA-EXEC-001", "rajesh.mehta", "Executive", "Chief Executive Officer"),
@@ -82,10 +82,14 @@ def run_migration(db_path: str):
     for email, emp_id, uname, dept, desig in defaults:
         cursor.execute("""
             UPDATE users 
-            SET employee_id = COALESCE(employee_id, ?),
-                username = COALESCE(username, ?),
-                department = COALESCE(department, ?),
-                designation = COALESCE(designation, ?)
+            SET employee_id = ?,
+                username = COALESCE(NULLIF(username, ''), ?),
+                department = COALESCE(NULLIF(department, ''), ?),
+                designation = COALESCE(NULLIF(designation, ''), ?),
+                status = 'active',
+                is_active = 1,
+                failed_login_attempts = 0,
+                locked_until = NULL
             WHERE email = ?
         """, (emp_id, uname, dept, desig, email))
 

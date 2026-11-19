@@ -1,14 +1,21 @@
-export type Role = 'management' | 'goal_owner' | 'team_member' | 'coordinator' | 'admin';
+export type Role = 'management' | 'goal_owner' | 'team_member' | 'coordinator' | 'admin' | 'employee';
 
 export interface User {
   id: string;
   email: string;
   full_name: string;
   role: Role;
+  employee_id?: string;
+  username?: string;
+  department?: string;
+  designation?: string;
+  status?: 'active' | 'inactive' | 'suspended' | 'archived';
+  permissions_json?: string;
   phone?: string;
   job_title?: string;
   avatar_url?: string;
   is_active: boolean;
+  must_change_password?: boolean;
   created_at: string;
   last_login?: string;
 }
@@ -45,6 +52,16 @@ export interface Goal {
 
 export type RAGStatus = 'green' | 'amber' | 'red' | 'grey';
 
+export interface TaskAttachment {
+  id: number;
+  activity_id: number;
+  file_name: string;
+  file_url: string;
+  file_size?: number;
+  uploaded_by?: number;
+  created_at: string;
+}
+
 export interface Activity {
   id: string;
   activity_code?: string;
@@ -62,9 +79,15 @@ export interface Activity {
   actual_quantity: number;
   last_completed_date?: string;
   next_due_date?: string;
-  status: 'todo' | 'in_progress' | 'completed' | 'blocked' | 'cancelled';
+  status: 'todo' | 'in_progress' | 'completed' | 'blocked' | 'cancelled' | 'assigned' | 'under_review' | 'on_hold';
   rag_status: RAGStatus;
   evidence_notes?: string;
+  submission_notes?: string;
+  admin_feedback?: string;
+  submitted_at?: string;
+  approved_at?: string;
+  approved_by?: number;
+  attachments?: TaskAttachment[];
   module?: 'hiring' | 'expansion' | 'product' | 'general';
   created_at: string;
   updated_at: string;
@@ -353,4 +376,69 @@ export interface DashboardData {
     city_expansion?: Array<{ city: string; target_bd: number; current_bd: number; providers_shortlisted: number }>;
     product_milestones?: Array<{ product: string; completed_milestones: number; total_milestones: number; progress_pct: number }>;
   };
+}
+
+export interface LoginSession {
+  id: number;
+  user_id: number;
+  user_name?: string;
+  employee_id?: string;
+  ip_address?: string;
+  user_agent?: string;
+  login_at: string;
+  logout_at?: string;
+  status: 'active' | 'closed';
+}
+
+export interface AuditLogItem {
+  id: number;
+  user_id?: number;
+  user_name?: string;
+  employee_id?: string;
+  action: string;
+  entity_type: string;
+  entity_id?: number;
+  ip_address?: string;
+  created_at: string;
+  old_value?: string;
+  new_value?: string;
+}
+
+export interface TeamMemberStats {
+  id: number;
+  employee_id: string;
+  full_name: string;
+  email: string;
+  department: string;
+  designation: string;
+  role: string;
+  status: string;
+  assigned_count: number;
+  completed_count: number;
+  pending_count: number;
+  under_review_count: number;
+  overdue_count: number;
+  productivity_pct: number;
+}
+
+export interface EmployeeDashboardData {
+  user: {
+    id: number;
+    email: string;
+    full_name: string;
+    employee_id: string;
+    department: string;
+    designation: string;
+    role: string;
+    status: string;
+  };
+  total_assigned: number;
+  today_tasks: number;
+  pending_tasks: number;
+  under_review_tasks: number;
+  completed_tasks: number;
+  overdue_tasks: number;
+  productivity_pct: number;
+  upcoming_deadlines: Activity[];
+  recent_submissions: Activity[];
 }

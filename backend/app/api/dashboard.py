@@ -327,3 +327,71 @@ async def get_executive_dashboard(
         alerts=alerts[:15],
         charts=charts_data,
     )
+
+@router.get("/employee-metrics")
+async def get_employee_dashboard(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    today = date.today()
+    week_end = today + timedelta(days=7)
+    
+    # Strictly scoped to current_user.id
+    tasks_res = await db.execute(
+        select(Activity).where(Activity.assigned_to == current_user.id).order_by(Activity.due_date.asc().nulls_last())
+    )
+    my_tasks = tasks_res.scalars().all()
+    
+    total_assigned = len(my_tasks)
+    today_tasks = len([t for t in my_tasks if t.due_date == today and t.status != "completed"])
+    pending_tasks = len([t for t in my_tasks if t.status in ("assigned", "todo", "in_progress")])
+    under_review_tasks = len([t for t in my_tasks if t.status == "under_review"])
+    completed_tasks = len([t for t in my_tasks if t.status == "completed"])
+    overdue_tasks = len([t for t in my_tasks if t.due_date and t.due_date < today and t.status != "completed"])
+    upcoming_tasks = [t for t in my_tasks if t.due_date and t.due_date > today and t.due_date <= week_end and t.status != "completed"]
+    
+    productivity = round((completed_tasks / total_assigned * 100), 1) if total_assigned > 0 else 0.0
+    
+    return {
+        "employee": {
+            "id": current_user.id,
+            "employee_id": current_user.employee_id or "FA-EMP-001",
+            "name": current_user.full_name,
+            "email": current_user.email,
+            "department": current_user.department or "Operations",
+            "designation": current_user.designation or current_user.job_title or "Team Member",
+            "role": current_user.role
+        },
+        "kpis": {
+            "total_assigned": total_assigned,
+            "today_tasks": today_tasks,
+            "pending_tasks": pending_tasks,
+            "under_review_tasks": under_review_tasks,
+            "completed_tasks": completed_tasks,
+            "overdue_tasks": overdue_tasks,
+            "upcoming_deadlines_count": len(upcoming_tasks),
+            "productivity_pct": productivity
+        },
+        "upcoming_deadlines": [
+            {
+                "id": t.id,
+                "name": t.name,
+                "due_date": t.due_date.isoformat() if t.due_date else None,
+                "priority": t.priority,
+                "status": t.status,
+                "rag_status": t.rag_status
+            } for t in upcoming_tasks
+        ],
+        "recent_tasks": [
+            {
+                "id": t.id,
+                "name": t.name,
+                "status": t.status,
+                "priority": t.priority,
+                "due_date": t.due_date.isoformat() if t.due_date else None,
+                "submission_notes": t.submission_notes,
+                "admin_feedback": t.admin_feedback,
+                "rag_status": t.rag_status
+            } for t in my_tasks[:10]
+        ]
+    }

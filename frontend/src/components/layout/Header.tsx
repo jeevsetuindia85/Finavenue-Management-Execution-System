@@ -30,13 +30,13 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onUserSwitch }) => 
   const [isSyncing, setIsSyncing] = useState(false);
 
   const demoPersonas = [
-    { email: 'ceo@mes.local', role: 'management', name: 'Rajesh Mehta (CEO)', title: 'Management / Executive' },
-    { email: 'hr@mes.local', role: 'goal_owner', name: 'Priya Sharma', title: 'Head of Talent (Goal 01)' },
-    { email: 'bd@mes.local', role: 'goal_owner', name: 'Amit Patel', title: 'Head of BD (Goal 02)' },
-    { email: 'product@mes.local', role: 'goal_owner', name: 'Sneha Reddy', title: 'Head of Product (Goal 03)' },
-    { email: 'maitwayi@mes.local', role: 'coordinator', name: 'Maitwayi Desai', title: 'Execution Coordinator' },
-    { email: 'recruiter@mes.local', role: 'team_member', name: 'Ananya Iyer', title: 'Talent Acquisition Team' },
-    { email: 'admin@mes.local', role: 'admin', name: 'System Admin', title: 'Platform Admin' },
+    { email: 'admin@mes.local', role: 'admin', name: 'System Admin (FA-ADM-001)', title: 'Super Admin — Full Control' },
+    { email: 'ceo@mes.local', role: 'management', name: 'Rajesh Mehta (FA-EXEC-001)', title: 'CEO / Executive Management' },
+    { email: 'hr@mes.local', role: 'goal_owner', name: 'Priya Sharma (FA-HR-001)', title: 'Head of Talent (Goal 01)' },
+    { email: 'analyst1@mes.local', role: 'team_member', name: 'Vikram Joshi (FA-EMP-001)', title: 'Financial Analyst (Employee)' },
+    { email: 'recruiter@mes.local', role: 'team_member', name: 'Ananya Iyer (FA-EMP-002)', title: 'HR Recruiter (Employee)' },
+    { email: 'bd@mes.local', role: 'goal_owner', name: 'Amit Patel (FA-BD-001)', title: 'Head of BD (Goal 02)' },
+    { email: 'product@mes.local', role: 'goal_owner', name: 'Sneha Reddy (FA-PRD-001)', title: 'Head of Product (Goal 03)' },
   ];
 
   const fetchNotifs = async () => {
@@ -213,6 +213,21 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onUserSwitch }) => 
           )}
         </div>
 
+        {/* Logged in Employee Info Badge */}
+        {currentUser && (
+          <div className="hidden md:flex items-center gap-2 pl-3 pr-2 py-1 bg-slate-50 border border-slate-200 rounded-lg text-xs">
+            <span className="font-semibold text-slate-800">{currentUser.full_name}</span>
+            {currentUser.employee_id && (
+              <span className="px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-700 font-mono text-[10px] font-bold border border-teal-500/20">
+                {currentUser.employee_id}
+              </span>
+            )}
+            <span className="px-1.5 py-0.5 rounded bg-slate-200 text-slate-700 text-[10px] font-medium capitalize">
+              {currentUser.role?.replace('_', ' ')}
+            </span>
+          </div>
+        )}
+
         {/* Role Switcher Pill */}
         <div className="relative">
           <button
@@ -221,9 +236,9 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onUserSwitch }) => 
             title="Switch Demo Role Persona"
           >
             <Sparkles size={13} className="text-teal-400" />
-            <span className="hidden sm:inline">Role:</span>
+            <span className="hidden sm:inline">Switch:</span>
             <span className="text-teal-300 font-semibold capitalize">
-              {currentUser?.role?.replace('_', ' ') || 'CEO'}
+              {currentUser?.role === 'admin' ? 'Super Admin' : currentUser?.role?.replace('_', ' ') || 'Role'}
             </span>
           </button>
 

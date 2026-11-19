@@ -3,7 +3,8 @@ import {
   User, Goal, Activity, WeeklyReview, HiringAgency, Candidate,
   ProfessionalReference, Conference, HiringSummary, OfficeLocation,
   CoworkingProvider, SiteVisit, ExpansionSummary, Product, ProductMilestone,
-  CalendarEvent, Notification, DashboardData
+  CalendarEvent, Notification, DashboardData, TaskAttachment, LoginSession,
+  AuditLogItem, TeamMemberStats, EmployeeDashboardData
 } from '../types';
 
 const API_BASE = '/api/v1';
@@ -54,7 +55,19 @@ export const api = {
     localStorage.setItem('user', JSON.stringify(res.data));
     return res.data;
   },
-  logout() {
+  async changePassword(current_password: string, new_password: string) {
+    const res = await apiClient.post('/auth/change-password', {
+      current_password,
+      new_password,
+    });
+    return res.data;
+  },
+  async logout() {
+    try {
+      await apiClient.post('/auth/logout');
+    } catch (e) {
+      // ignore
+    }
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
     localStorage.removeItem('user');
@@ -64,6 +77,10 @@ export const api = {
   // Dashboard
   async getDashboard(): Promise<DashboardData> {
     const res = await apiClient.get<DashboardData>('/dashboard/');
+    return res.data;
+  },
+  async getEmployeeMetrics(): Promise<EmployeeDashboardData> {
+    const res = await apiClient.get<EmployeeDashboardData>('/dashboard/employee-metrics');
     return res.data;
   },
 
@@ -108,6 +125,34 @@ export const api = {
   },
   async addActivityComment(id: string, content: string) {
     const res = await apiClient.post(`/activities/${id}/comments`, { content });
+    return res.data;
+  },
+  async submitTaskForReview(id: string, submission_notes: string, actual_quantity?: number): Promise<Activity> {
+    const res = await apiClient.post<Activity>(`/activities/${id}/submit`, {
+      submission_notes,
+      actual_quantity: actual_quantity !== undefined ? actual_quantity : 1,
+    });
+    return res.data;
+  },
+  async adminReviewTask(
+    id: string,
+    action: 'approve' | 'reject' | 'request_changes',
+    admin_feedback?: string
+  ): Promise<Activity> {
+    const res = await apiClient.post<Activity>(`/activities/${id}/review`, {
+      action,
+      admin_feedback: admin_feedback || '',
+    });
+    return res.data;
+  },
+  async uploadTaskAttachment(id: string, file: File): Promise<TaskAttachment> {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await apiClient.post<TaskAttachment>(`/activities/${id}/attachments`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     return res.data;
   },
 
@@ -279,13 +324,59 @@ export const api = {
     return res.data;
   },
 
-  // Users
+  // Users & Admin Control
   async getUsers(): Promise<User[]> {
     const res = await apiClient.get<User[]>('/users/');
     return res.data;
   },
+  async getTeamStats(): Promise<TeamMemberStats[]> {
+    const res = await apiClient.get<TeamMemberStats[]>('/users/team-stats');
+    return res.data;
+  },
+  async adminCreateEmployee(data: {
+    email: string;
+    full_name: string;
+    password?: string;
+    employee_id?: string;
+    username?: string;
+    department?: string;
+    designation?: string;
+    role?: string;
+    permissions_json?: string;
+  }): Promise<User> {
+    const res = await apiClient.post<User>('/users/', data);
+    return res.data;
+  },
+  async adminUpdateEmployee(id: string | number, data: Partial<User>): Promise<User> {
+    const res = await apiClient.patch<User>(`/users/${id}`, data);
+    return res.data;
+  },
+  async adminResetPassword(id: string | number, new_password: string) {
+    const res = await apiClient.post(`/users/${id}/reset-password`, { new_password });
+    return res.data;
+  },
+  async adminToggleStatus(id: string | number, status_val: 'active' | 'inactive' | 'suspended') {
+    const res = await apiClient.post(`/users/${id}/toggle-status`, null, {
+      params: { status_val },
+    });
+    return res.data;
+  },
+  async adminDeleteUser(id: string | number) {
+    const res = await apiClient.delete(`/users/${id}`);
+    return res.data;
+  },
   async inviteUser(email: string, full_name: string, role: string, job_title?: string): Promise<User> {
     const res = await apiClient.post<User>('/users/invite', { email, full_name, role, job_title });
+    return res.data;
+  },
+
+  // Audit Logs & Activity Monitoring
+  async getAuditLogs(params?: { user_id?: number; entity_type?: string; limit?: number }): Promise<AuditLogItem[]> {
+    const res = await apiClient.get<AuditLogItem[]>('/audit/', { params });
+    return res.data;
+  },
+  async getLoginSessions(limit = 100): Promise<LoginSession[]> {
+    const res = await apiClient.get<LoginSession[]>('/audit/sessions', { params: { limit } });
     return res.data;
   },
 

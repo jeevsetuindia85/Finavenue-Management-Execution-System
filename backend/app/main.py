@@ -14,7 +14,14 @@ from app.api import (
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
+    # Startup: Run safe schema migrations
+    try:
+        from scripts.migrate_v2 import run_migration
+        db_file = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "mes.db"))
+        run_migration(db_file)
+    except Exception as e:
+        print(f"Startup migration notice: {e}")
+        
     await init_db()
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     try:

@@ -1,12 +1,16 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  ShieldCheck, 
-  Lock, 
-  Mail, 
-  ArrowRight, 
+import {
+  ShieldCheck,
+  Lock,
+  User,
+  ArrowRight,
   AlertCircle,
-  KeyRound
+  KeyRound,
+  Eye,
+  EyeOff,
+  BadgeCheck,
+  CheckCircle2
 } from 'lucide-react';
 import { api } from '../services/api';
 
@@ -16,8 +20,9 @@ interface LoginPageProps {
 
 export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -27,30 +32,33 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
     setLoading(true);
 
     try {
-      await api.loginJson(email, password);
+      await api.loginJson(identifier.trim(), password);
       await api.getCurrentUser();
       onLoginSuccess();
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Invalid email or password. Please try again.');
+      setError(
+        err.response?.data?.detail ||
+        'Invalid Employee ID/Email or password. Please verify credentials.'
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  const handleQuickLogin = async (demoEmail: string, demoPass: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
+  const handleQuickLogin = async (id: string, pass: string) => {
+    setIdentifier(id);
+    setPassword(pass);
     setError(null);
     setLoading(true);
 
     try {
-      await api.loginJson(demoEmail, demoPass);
+      await api.loginJson(id, pass);
       await api.getCurrentUser();
       onLoginSuccess();
       navigate('/');
     } catch (err: any) {
-      setError(err.response?.data?.detail || 'Failed to authenticate with demo credentials.');
+      setError(err.response?.data?.detail || 'Failed to authenticate.');
     } finally {
       setLoading(false);
     }
@@ -63,23 +71,25 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
       <div className="w-full max-w-md relative z-10">
         {/* Brand / Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-slate-800 text-white shadow-xl shadow-teal-500/10 mb-4 border border-teal-400/20">
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-slate-800 text-white shadow-xl shadow-teal-500/10 mb-3 border border-teal-400/20">
             <ShieldCheck className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-white">ExecFlow</h1>
-          <p className="text-sm text-slate-400 mt-1 font-medium">Management Execution & Goal Tracking SaaS</p>
-          <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-[11px] font-semibold text-teal-400">
+          <p className="text-sm text-slate-400 mt-1 font-medium">Finavenue Management Execution System</p>
+          <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-slate-800 border border-slate-700 text-[11px] font-semibold text-teal-400">
             <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
-            Enterprise Edition &middot; 2026 Ready
+            Admin-Controlled Multi-User Platform
           </div>
         </div>
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-2xl border border-slate-100 p-8">
-          <div className="mb-6">
+          <div className="mb-5">
             <h2 className="text-lg font-bold text-slate-900">Sign in to your account</h2>
-            <p className="text-xs text-slate-500 mt-0.5">Enter credentials or click any demo persona below.</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Enter your Employee ID, Username, or Corporate Email.
+            </p>
           </div>
 
           {error && (
@@ -88,7 +98,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               <div>
                 <span className="font-semibold">{error}</span>
                 <p className="mt-1 text-slate-600 text-[11px]">
-                  Tip: Use 1-Click Demo Login below or password <code className="bg-rose-100 px-1 py-0.5 rounded font-mono font-bold text-rose-900">demo1234</code>
+                  Tip: Use 1-Click Persona Login below or check your credentials with System Admin.
                 </p>
               </div>
             </div>
@@ -96,15 +106,17 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1.5">Corporate Email</label>
+              <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                Employee ID / Email / Username
+              </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
                   required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. hr@mes.local or ceo@mes.local"
+                  value={identifier}
+                  onChange={(e) => setIdentifier(e.target.value)}
+                  placeholder="e.g. FA-ADM-001, FA-EMP-001, or admin@mes.local"
                   className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition"
                 />
               </div>
@@ -115,19 +127,21 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="e.g. demo1234"
-                  className="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition"
+                  placeholder="Enter your password"
+                  className="w-full pl-9 pr-10 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent transition"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
               </div>
-            </div>
-
-            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-100">
-              <KeyRound className="w-3.5 h-3.5 text-teal-600 shrink-0" />
-              <span>Demo password: <strong className="text-slate-800 font-mono">demo1234</strong> (or click instant access below)</span>
             </div>
 
             <button
@@ -139,112 +153,122 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onLoginSuccess }) => {
                 <div className="w-4 h-4 border-2 border-white/20 border-t-white rounded-full animate-spin" />
               ) : (
                 <>
-                  Sign In
+                  Sign In to Workspace
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
           </form>
 
-          {/* Quick Demo Switcher */}
-          <div className="mt-7 pt-6 border-t border-slate-100">
-            <div className="flex items-center justify-between mb-3">
-              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">1-Click Instant Login</span>
-              <span className="text-[10px] text-teal-600 font-semibold bg-teal-50 px-2 py-0.5 rounded">No password needed</span>
+          {/* Quick Persona Access */}
+          <div className="mt-6 pt-5 border-t border-slate-100">
+            <div className="flex items-center justify-between mb-2.5">
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                1-Click Instant Persona Login
+              </span>
+              <span className="text-[10px] text-teal-600 font-semibold bg-teal-50 px-2 py-0.5 rounded">
+                Pre-authenticated
+              </span>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5 max-h-56 overflow-y-auto pr-1">
+              {/* Super Admin */}
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('admin@mes.local', 'admin123')}
+                className="w-full p-2 rounded-xl border border-rose-200 bg-rose-50/40 hover:bg-rose-50 flex items-center justify-between text-left transition group"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-rose-600 text-white flex items-center justify-center font-bold text-[10px]">
+                    ADM
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-900 flex items-center gap-1">
+                      System Admin
+                      <span className="text-[10px] font-mono text-rose-700 bg-rose-100 px-1 rounded">FA-ADM-001</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500">Super Admin &middot; Full System Control</div>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-rose-700 group-hover:underline">Login &rarr;</span>
+              </button>
+
+              {/* CEO */}
               <button
                 type="button"
                 onClick={() => handleQuickLogin('ceo@mes.local', 'demo1234')}
-                className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-slate-400 hover:bg-slate-50 flex items-center justify-between text-left transition group"
+                className="w-full p-2 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 flex items-center justify-between text-left transition group"
               >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-[10px]">
                     CEO
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-slate-900">Dr. Rajesh Mehta</div>
-                    <div className="text-[10px] text-slate-500">ceo@mes.local &middot; Management / Executive</div>
+                    <div className="text-xs font-semibold text-slate-900 flex items-center gap-1">
+                      Dr. Rajesh Mehta
+                      <span className="text-[10px] font-mono text-slate-600 bg-slate-100 px-1 rounded">FA-EXEC-001</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500">Executive Management</div>
                   </div>
                 </div>
-                <span className="text-[10px] font-medium text-slate-400 group-hover:text-slate-700">Enter &rarr;</span>
+                <span className="text-[10px] text-slate-400 group-hover:text-slate-700">Login &rarr;</span>
               </button>
 
+              {/* Employee 1: Financial Analyst */}
               <button
                 type="button"
-                onClick={() => handleQuickLogin('hr@mes.local', 'demo1234')}
-                className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-slate-400 hover:bg-slate-50 flex items-center justify-between text-left transition group"
+                onClick={() => handleQuickLogin('analyst1@mes.local', 'demo1234')}
+                className="w-full p-2 rounded-xl border border-teal-200 bg-teal-50/40 hover:bg-teal-50 flex items-center justify-between text-left transition group"
               >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-teal-600 text-white flex items-center justify-center font-bold text-[10px]">
+                    EMP
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-slate-900 flex items-center gap-1">
+                      Vikram Joshi
+                      <span className="text-[10px] font-mono text-teal-800 bg-teal-100 px-1 rounded">FA-EMP-001</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500">Team Member &middot; Financial Analyst (Isolated Workspace)</div>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-teal-700 group-hover:underline">Login &rarr;</span>
+              </button>
+
+              {/* Employee 2: Recruiter */}
+              <button
+                type="button"
+                onClick={() => handleQuickLogin('recruiter@mes.local', 'demo1234')}
+                className="w-full p-2 rounded-xl border border-slate-200 hover:border-slate-300 hover:bg-slate-50 flex items-center justify-between text-left transition group"
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-[10px]">
                     HR
                   </div>
                   <div>
-                    <div className="text-xs font-semibold text-slate-900">Priya Sharma</div>
-                    <div className="text-[10px] text-slate-500">hr@mes.local &middot; Goal 01: Talent Acquisition</div>
+                    <div className="text-xs font-semibold text-slate-900 flex items-center gap-1">
+                      Ananya Iyer
+                      <span className="text-[10px] font-mono text-blue-700 bg-blue-50 px-1 rounded">FA-EMP-002</span>
+                    </div>
+                    <div className="text-[10px] text-slate-500">Team Member &middot; HR Recruiter</div>
                   </div>
                 </div>
-                <span className="text-[10px] font-medium text-slate-400 group-hover:text-slate-700">Enter &rarr;</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('bd@mes.local', 'demo1234')}
-                className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-slate-400 hover:bg-slate-50 flex items-center justify-between text-left transition group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-xs">
-                    EXP
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold text-slate-900">Amit Patel</div>
-                    <div className="text-[10px] text-slate-500">bd@mes.local &middot; Goal 02: Ahmedabad & Bangalore</div>
-                  </div>
-                </div>
-                <span className="text-[10px] font-medium text-slate-400 group-hover:text-slate-700">Enter &rarr;</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('product@mes.local', 'demo1234')}
-                className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-slate-400 hover:bg-slate-50 flex items-center justify-between text-left transition group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-amber-600 text-white flex items-center justify-center font-bold text-xs">
-                    PRD
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold text-slate-900">Sneha Reddy</div>
-                    <div className="text-[10px] text-slate-500">product@mes.local &middot; Goal 03: PMS & CAT II AIF</div>
-                  </div>
-                </div>
-                <span className="text-[10px] font-medium text-slate-400 group-hover:text-slate-700">Enter &rarr;</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('maitwayi@mes.local', 'demo1234')}
-                className="w-full p-2.5 rounded-xl border border-slate-200 hover:border-slate-400 hover:bg-slate-50 flex items-center justify-between text-left transition group"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center font-bold text-xs">
-                    ANA
-                  </div>
-                  <div>
-                    <div className="text-xs font-semibold text-slate-900">Maitwayi Desai</div>
-                    <div className="text-[10px] text-slate-500">maitwayi@mes.local &middot; Execution Coordinator</div>
-                  </div>
-                </div>
-                <span className="text-[10px] font-medium text-slate-400 group-hover:text-slate-700">Enter &rarr;</span>
+                <span className="text-[10px] text-slate-400 group-hover:text-slate-700">Login &rarr;</span>
               </button>
             </div>
+          </div>
+
+          {/* Privacy & Policy notice */}
+          <div className="mt-4 pt-3 border-t border-slate-100 text-center">
+            <p className="text-[10px] text-slate-400">
+              Public registration is disabled. All user accounts and employee IDs are managed centrally by the Administrator.
+            </p>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="text-center mt-6 text-xs text-slate-500">
-          ExecFlow &copy; 2026 &middot; Annual Business Execution & Governance
+        <div className="text-center mt-5 text-xs text-slate-500">
+          ExecFlow &copy; 2026 &middot; Finavenue Capital Management Execution System
         </div>
       </div>
     </div>

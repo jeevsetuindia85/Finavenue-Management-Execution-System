@@ -31,6 +31,29 @@ class ActivityUpdateSchema(BaseModel):
     status: Optional[str] = None
     evidence_notes: Optional[str] = None
     next_due_date: Optional[date] = None
+    submission_notes: Optional[str] = None
+    admin_feedback: Optional[str] = None
+
+class TaskSubmitRequest(BaseModel):
+    submission_notes: str
+    actual_quantity: Optional[int] = None
+
+class TaskReviewRequest(BaseModel):
+    action: str = Field(..., description="approve, reject, or request_changes")
+    feedback: Optional[str] = None
+
+class TaskAttachmentOut(BaseModel):
+    id: str
+    task_id: str
+    uploaded_by: str
+    file_name: str
+    file_path: str
+    file_size: Optional[int] = None
+    mime_type: Optional[str] = None
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 class ActivityOut(ActivityBase):
     id: str
@@ -41,10 +64,16 @@ class ActivityOut(ActivityBase):
     status: str
     rag_status: str
     evidence_notes: Optional[str] = None
+    admin_feedback: Optional[str] = None
+    submission_notes: Optional[str] = None
+    submitted_at: Optional[datetime] = None
+    approved_at: Optional[datetime] = None
+    approved_by: Optional[str] = None
     created_by: Optional[str] = None
     created_at: datetime
     updated_at: datetime
     assignee: Optional[UserBrief] = None
+    attachments: Optional[List[TaskAttachmentOut]] = []
 
     class Config:
         from_attributes = True

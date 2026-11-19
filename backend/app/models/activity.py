@@ -6,9 +6,12 @@ from app.core.database import Base
 import enum
 
 class ActivityStatus(str, enum.Enum):
+    ASSIGNED = "assigned"
     TODO = "todo"
     IN_PROGRESS = "in_progress"
+    UNDER_REVIEW = "under_review"
     COMPLETED = "completed"
+    ON_HOLD = "on_hold"
     BLOCKED = "blocked"
     CANCELLED = "cancelled"
 
@@ -36,10 +39,18 @@ class Activity(Base):
     actual_quantity: Mapped[int] = mapped_column(Integer, default=0)
     last_completed_date: Mapped[date | None] = mapped_column(Date, nullable=True)
     next_due_date: Mapped[date | None] = mapped_column(Date, nullable=True)
-    status: Mapped[str] = mapped_column(String(30), default=ActivityStatus.TODO.value)
+    status: Mapped[str] = mapped_column(String(30), default=ActivityStatus.ASSIGNED.value)
     rag_status: Mapped[str] = mapped_column(String(20), default=RAGStatus.GREY.value)
     evidence_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
     module: Mapped[str | None] = mapped_column(String(50), nullable=True)  # hiring / expansion / product / general
+    
+    # Task Submission & Admin Review workflow fields
+    admin_feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
+    submission_notes: Mapped[str | None] = mapped_column(Text, nullable=True)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    approved_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
+
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
 
@@ -47,6 +58,24 @@ class Activity(Base):
     assignee = relationship("User", back_populates="assigned_activities", foreign_keys=[assigned_to])
     creator = relationship("User", back_populates="created_activities", foreign_keys=[created_by])
     updates = relationship("ActivityUpdate", back_populates="activity", cascade="all, delete-orphan")
+    attachments = relationship("TaskAttachment", back_populates="task", cascade="all, delete-orphan")
+
+class TaskAttachment(Base):
+    __tablename__ = "task_attachments"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    task_id: Mapped[str] = mapped_column(String(36), ForeignKey("activities.id", ondelete="CASCADE"), nullable=False)
+    uploaded_by: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+    file_name: Mapped[str] = mapped_column(String(255), nullable=False)
+    file_path: Mapped[str] = mapped_column(String(500), nullable=False)
+    file_size: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    mime_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    task = relationship("Activity", back_populates="attachments")
+    uploader = relationship("User", foreign_keys=[uploaded_by])
+
+Attachment = TaskAttachment  # Backwards compatibility alias
 
 class ActivityUpdate(Base):
     __tablename__ = "activity_updates"
@@ -71,17 +100,4 @@ class Comment(Base):
     entity_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
     user_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
-
-class Attachment(Base):
-    __tablename__ = "attachments"
-
-    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
-    entity_type: Mapped[str] = mapped_column(String(50), nullable=False)
-    entity_id: Mapped[str] = mapped_column(String(36), nullable=False, index=True)
-    filename: Mapped[str] = mapped_column(String(500), nullable=False)
-    file_path: Mapped[str] = mapped_column(String(1000), nullable=False)
-    mime_type: Mapped[str | None] = mapped_column(String(100), nullable=True)
-    size: Mapped[int | None] = mapped_column(Integer, nullable=True)
-    uploaded_by: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))

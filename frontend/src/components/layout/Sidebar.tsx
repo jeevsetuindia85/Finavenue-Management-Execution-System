@@ -14,7 +14,12 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  ShieldCheck
+  ShieldCheck,
+  ClipboardList,
+  Send,
+  UserCheck,
+  Activity as ActivityIcon,
+  ListTodo
 } from 'lucide-react';
 import { User } from '../../types';
 
@@ -29,19 +34,47 @@ export const Sidebar: React.FC<SidebarProps> = ({
   collapsed,
   onToggleCollapse,
 }) => {
-  const navItems = [
-    { name: 'Executive Dashboard', path: '/', icon: LayoutDashboard },
-    { name: 'Goals & Objectives', path: '/goals', icon: Target },
-    { name: 'Activity Tracker', path: '/activities', icon: CheckSquare },
-    { name: 'Hiring Management', path: '/hiring', icon: UserPlus },
-    { name: 'Office Expansion', path: '/expansion', icon: Building2 },
-    { name: 'Product Development', path: '/products', icon: Layers },
-    { name: 'Weekly Reviews', path: '/reviews', icon: CalendarCheck2 },
-    { name: 'Calendar', path: '/calendar', icon: Calendar },
-    { name: 'Team Management', path: '/team', icon: Users },
-    { name: 'Reports & Analytics', path: '/reports', icon: FileBarChart },
-    { name: 'Settings', path: '/settings', icon: Settings },
-  ];
+  const role = currentUser?.role || 'team_member';
+  const isAdminOrMgmt = role === 'admin' || role === 'management';
+  const isEmployee = role === 'team_member' || role === 'employee';
+
+  // Build role-specific navigation
+  const navItems = isEmployee
+    ? [
+        { name: 'My Dashboard', path: '/', icon: LayoutDashboard },
+        { name: 'My Tasks', path: '/my-tasks', icon: ListTodo },
+        { name: 'My Submissions', path: '/my-submissions', icon: Send },
+        { name: 'Calendar', path: '/calendar', icon: Calendar },
+        { name: 'My Profile', path: '/my-profile', icon: UserCheck },
+      ]
+    : isAdminOrMgmt
+    ? [
+        { name: 'Admin Overview', path: '/', icon: LayoutDashboard },
+        { name: 'Team Management', path: '/admin/team', icon: Users, badge: 'Admin' },
+        { name: 'Central Task Manager', path: '/admin/tasks', icon: ClipboardList, badge: 'Admin' },
+        { name: 'Activity & Audit Logs', path: '/admin/activity-logs', icon: ActivityIcon, badge: 'Admin' },
+        { name: 'Goals & Strategy', path: '/goals', icon: Target },
+        { name: 'All Activities', path: '/activities', icon: CheckSquare },
+        { name: 'Hiring Management', path: '/hiring', icon: UserPlus },
+        { name: 'Office Expansion', path: '/expansion', icon: Building2 },
+        { name: 'Product Development', path: '/products', icon: Layers },
+        { name: 'Weekly Reviews', path: '/reviews', icon: CalendarCheck2 },
+        { name: 'Calendar', path: '/calendar', icon: Calendar },
+        { name: 'Reports & Analytics', path: '/reports', icon: FileBarChart },
+        { name: 'System Settings', path: '/settings', icon: Settings },
+      ]
+    : [
+        // Goal owners & Coordinators
+        { name: 'Executive Dashboard', path: '/', icon: LayoutDashboard },
+        { name: 'Goals & Objectives', path: '/goals', icon: Target },
+        { name: 'Activity Tracker', path: '/activities', icon: CheckSquare },
+        { name: 'Hiring Management', path: '/hiring', icon: UserPlus },
+        { name: 'Office Expansion', path: '/expansion', icon: Building2 },
+        { name: 'Product Development', path: '/products', icon: Layers },
+        { name: 'Weekly Reviews', path: '/reviews', icon: CalendarCheck2 },
+        { name: 'Calendar', path: '/calendar', icon: Calendar },
+        { name: 'Reports & Analytics', path: '/reports', icon: FileBarChart },
+      ];
 
   return (
     <aside
@@ -63,10 +96,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className="text-base font-bold text-white tracking-tight flex items-center gap-1.5">
                 ExecFlow
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-300 font-semibold uppercase">
-                  OS
+                  {isAdminOrMgmt ? 'ADMIN' : 'PORTAL'}
                 </span>
               </span>
-              <span className="text-[11px] text-slate-400 font-medium">Management Execution</span>
+              <span className="text-[11px] text-slate-400 font-medium">
+                {isEmployee ? 'Employee Workspace' : 'Management Execution'}
+              </span>
             </div>
           )}
         </NavLink>
@@ -88,7 +123,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               key={item.path}
               to={item.path}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                `flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                   isActive
                     ? 'bg-teal-500/15 text-teal-400 border border-teal-500/30 shadow-sm'
                     : 'text-slate-300 hover:bg-slate-800 hover:text-white'
@@ -96,8 +131,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
               }
               title={collapsed ? item.name : undefined}
             >
-              <Icon size={19} className="shrink-0" />
-              {!collapsed && <span className="truncate">{item.name}</span>}
+              <div className="flex items-center gap-3 truncate">
+                <Icon size={19} className="shrink-0" />
+                {!collapsed && <span className="truncate">{item.name}</span>}
+              </div>
+              {!collapsed && (item as any).badge && (
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-500/10 text-teal-400 font-semibold border border-teal-500/20">
+                  {(item as any).badge}
+                </span>
+              )}
             </NavLink>
           );
         })}
@@ -114,14 +156,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <span className="text-xs font-semibold text-white truncate">
                 {currentUser?.full_name || 'Guest User'}
               </span>
-              <span className="text-[11px] text-slate-400 capitalize truncate flex items-center gap-1">
-                <ShieldCheck size={12} className="text-teal-400 inline" />
-                {currentUser?.role?.replace('_', ' ') || 'Management'}
-              </span>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                {currentUser?.employee_id && (
+                  <span className="text-[10px] text-teal-300 font-mono bg-teal-900/40 px-1 rounded border border-teal-500/30">
+                    {currentUser.employee_id}
+                  </span>
+                )}
+                <span className="text-[10px] text-slate-400 capitalize truncate">
+                  {currentUser?.role?.replace('_', ' ')}
+                </span>
+              </div>
             </div>
           </div>
         ) : (
-          <div className="flex justify-center" title={`${currentUser?.full_name} (${currentUser?.role})`}>
+          <div className="flex justify-center" title={`${currentUser?.full_name} (${currentUser?.employee_id || currentUser?.role})`}>
             <div className="w-8 h-8 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-teal-400 font-semibold text-xs">
               {currentUser?.full_name ? currentUser.full_name[0] : 'U'}
             </div>

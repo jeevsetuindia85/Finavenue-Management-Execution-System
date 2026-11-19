@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import String, Boolean, DateTime, Enum as SAEnum, Text
+from sqlalchemy import String, Boolean, DateTime, Enum as SAEnum, Text, Integer
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.core.database import Base
 import enum
@@ -12,18 +12,32 @@ class UserRole(str, enum.Enum):
     COORDINATOR = "coordinator"
     ADMIN = "admin"
 
+class UserStatus(str, enum.Enum):
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+    SUSPENDED = "suspended"
+    ARCHIVED = "archived"
+
 class User(Base):
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    employee_id: Mapped[str | None] = mapped_column(String(50), unique=True, index=True, nullable=True)
+    username: Mapped[str | None] = mapped_column(String(100), unique=True, index=True, nullable=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     hashed_password: Mapped[str] = mapped_column(String(255), nullable=False)
     full_name: Mapped[str] = mapped_column(String(200), nullable=False)
     role: Mapped[str] = mapped_column(String(50), default=UserRole.TEAM_MEMBER.value, nullable=False)
-    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
-    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    status: Mapped[str] = mapped_column(String(30), default=UserStatus.ACTIVE.value, nullable=False)
+    department: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    designation: Mapped[str | None] = mapped_column(String(100), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
-    job_title: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    must_change_password: Mapped[bool] = mapped_column(Boolean, default=False)
+    failed_login_attempts: Mapped[int] = mapped_column(Integer, default=0)
+    locked_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    permissions_json: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
     last_login: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -36,4 +50,4 @@ class User(Base):
     google_connection = relationship("GoogleCalendarConnection", back_populates="user", uselist=False)
 
     def __repr__(self):
-        return f"<User {self.email} ({self.role})>"
+        return f"<User {self.email} ({self.employee_id}) - {self.role}>"

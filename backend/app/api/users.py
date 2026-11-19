@@ -70,18 +70,24 @@ async def get_team_management_stats(
         
         employee_performance.append({
             "id": u.id,
-            "employee_id": u.employee_id or f"EMP-{u.id[:4].upper()}",
+            "employee_id": u.employee_id or f"FA-EMP-{str(u.id)[:4].upper()}",
             "name": u.full_name,
+            "full_name": u.full_name,
             "email": u.email,
             "role": u.role,
-            "department": u.department or "General",
+            "department": u.department or "Operations",
             "designation": u.designation or u.job_title or "Team Member",
             "status": u.status or "active",
             "total_tasks": total_tasks,
+            "assigned_count": total_tasks,
             "completed_tasks": completed_tasks,
+            "completed_count": completed_tasks,
             "pending_tasks": pending_tasks,
+            "pending_count": pending_tasks,
             "under_review_tasks": under_review_tasks,
+            "under_review_count": under_review_tasks,
             "overdue_tasks": overdue_tasks,
+            "overdue_count": overdue_tasks,
             "productivity_pct": productivity,
             "last_login": u.last_login.isoformat() if u.last_login else None
         })

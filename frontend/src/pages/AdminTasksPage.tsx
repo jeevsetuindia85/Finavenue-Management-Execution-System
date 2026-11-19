@@ -148,11 +148,17 @@ export const AdminTasksPage: React.FC = () => {
         ? true
         : String(t.assigned_to) === String(assigneeFilter);
 
+    const q = (searchQuery || '').toLowerCase();
+    const taskName = (t.name || '').toLowerCase();
+    const taskCode = (t.activity_code || '').toLowerCase();
+    const taskDesc = (t.description || '').toLowerCase();
+    const assigneeName = (t.assignee?.full_name || '').toLowerCase();
+
     const matchesSearch =
-      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (t.activity_code && t.activity_code.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (t.description && t.description.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (t.assignee?.full_name && t.assignee.full_name.toLowerCase().includes(searchQuery.toLowerCase()));
+      taskName.includes(q) ||
+      taskCode.includes(q) ||
+      taskDesc.includes(q) ||
+      assigneeName.includes(q);
 
     return matchesStatus && matchesAssignee && matchesSearch;
   });

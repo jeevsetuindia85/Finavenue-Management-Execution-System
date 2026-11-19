@@ -99,10 +99,15 @@ export const MyTasksPage: React.FC = () => {
         ? t.status === 'on_hold' || t.status === 'blocked'
         : true;
 
+    const q = (searchQuery || '').toLowerCase();
+    const taskName = (t.name || '').toLowerCase();
+    const taskCode = (t.activity_code || '').toLowerCase();
+    const taskDesc = (t.description || '').toLowerCase();
+
     const matchesSearch =
-      t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (t.activity_code && t.activity_code.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (t.description && t.description.toLowerCase().includes(searchQuery.toLowerCase()));
+      taskName.includes(q) ||
+      taskCode.includes(q) ||
+      taskDesc.includes(q);
 
     return matchesStatus && matchesSearch;
   });

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Sidebar } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
@@ -14,7 +14,7 @@ import { ReportsPage } from './pages/ReportsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { LoginPage } from './pages/LoginPage';
 
-// New Admin & Employee Isolation Pages
+// Admin & Employee Isolation Pages
 import { EmployeeDashboardPage } from './pages/EmployeeDashboardPage';
 import { MyTasksPage } from './pages/MyTasksPage';
 import { MySubmissionsPage } from './pages/MySubmissionsPage';
@@ -25,6 +25,70 @@ import { AdminActivityLogsPage } from './pages/AdminActivityLogsPage';
 
 import { api } from './services/api';
 import { User } from './types';
+import { AlertTriangle, RefreshCw } from 'lucide-react';
+
+interface ErrorBoundaryProps {
+  children: ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error('ErrorBoundary caught an unhandled error:', error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-white">
+          <div className="bg-slate-800 border border-slate-700 rounded-2xl p-8 max-w-lg w-full text-center shadow-2xl">
+            <div className="w-12 h-12 rounded-xl bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto mb-4 border border-rose-500/30">
+              <AlertTriangle size={24} />
+            </div>
+            <h2 className="text-xl font-bold text-white mb-2">Something went wrong</h2>
+            <p className="text-xs text-slate-400 mb-6 font-mono bg-slate-900/60 p-3 rounded-xl border border-slate-700/60 break-words">
+              {this.state.error?.message || 'An unexpected rendering error occurred.'}
+            </p>
+            <div className="flex items-center justify-center gap-3">
+              <button
+                onClick={() => {
+                  this.setState({ hasError: false, error: null });
+                  window.location.reload();
+                }}
+                className="px-4 py-2.5 bg-teal-600 hover:bg-teal-500 text-white rounded-xl text-xs font-bold transition flex items-center gap-2"
+              >
+                <RefreshCw size={14} />
+                Reload Page
+              </button>
+              <button
+                onClick={() => {
+                  window.location.href = '/';
+                }}
+                className="px-4 py-2.5 bg-slate-700 hover:bg-slate-600 text-slate-200 rounded-xl text-xs font-semibold transition"
+              >
+                Return to Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 const AppLayout: React.FC<{
   currentUser: User | null;
@@ -96,84 +160,114 @@ export const App: React.FC = () => {
   const isAdminOrMgmt = role === 'admin' || role === 'management';
 
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route
-          path="/login"
-          element={
-            currentUser ? (
-              <Navigate to="/" replace />
-            ) : (
-              <LoginPage onLoginSuccess={checkAuth} />
-            )
-          }
-        />
+    <ErrorBoundary>
+      <BrowserRouter>
+        <Routes>
+          <Route
+            path="/login"
+            element={
+              currentUser ? (
+                <Navigate to="/" replace />
+              ) : (
+                <LoginPage onLoginSuccess={checkAuth} />
+              )
+            }
+          />
 
-        {/* Protected App Routes */}
-        <Route
-          path="/*"
-          element={
-            currentUser ? (
-              <AppLayout
-                currentUser={currentUser}
-                onUserSwitch={(u) => setCurrentUser(u)}
-              >
-                <Routes>
-                  {/* Root / Dashboard */}
-                  <Route
-                    path="/"
-                    element={
-                      isEmployee ? (
-                        <EmployeeDashboardPage />
-                      ) : (
-                        <DashboardPage />
-                      )
-                    }
-                  />
+          {/* Protected App Routes */}
+          <Route
+            path="/*"
+            element={
+              currentUser ? (
+                <AppLayout
+                  currentUser={currentUser}
+                  onUserSwitch={(u) => setCurrentUser(u)}
+                >
+                  <Routes>
+                    {/* Root / Dashboard */}
+                    <Route
+                      path="/"
+                      element={
+                        isEmployee ? (
+                          <EmployeeDashboardPage />
+                        ) : (
+                          <DashboardPage />
+                        )
+                      }
+                    />
 
-                  {/* Employee Private Workspace Routes */}
-                  <Route path="/my-tasks" element={<MyTasksPage />} />
-                  <Route path="/my-submissions" element={<MySubmissionsPage />} />
-                  <Route path="/my-profile" element={<MyProfilePage />} />
+                    {/* Employee Private Workspace Routes */}
+                    <Route path="/my-tasks" element={<MyTasksPage />} />
+                    <Route path="/my-submissions" element={<MySubmissionsPage />} />
+                    <Route path="/my-profile" element={<MyProfilePage />} />
 
-                  {/* Calendar available to all roles */}
-                  <Route path="/calendar" element={<CalendarPage />} />
+                    {/* Calendar available to all authenticated roles */}
+                    <Route path="/calendar" element={<CalendarPage />} />
 
-                  {/* Admin Specific Routes (Guarded) */}
-                  {isAdminOrMgmt && (
-                    <>
-                      <Route path="/admin/team" element={<AdminTeamPage />} />
-                      <Route path="/team" element={<AdminTeamPage />} />
-                      <Route path="/admin/tasks" element={<AdminTasksPage />} />
-                      <Route path="/admin/activity-logs" element={<AdminActivityLogsPage />} />
-                      <Route path="/settings" element={<SettingsPage />} />
-                    </>
-                  )}
+                    {/* Admin Specific Routes */}
+                    <Route
+                      path="/admin/team"
+                      element={isAdminOrMgmt ? <AdminTeamPage /> : <Navigate to="/" replace />}
+                    />
+                    <Route
+                      path="/team"
+                      element={isAdminOrMgmt ? <AdminTeamPage /> : <Navigate to="/" replace />}
+                    />
+                    <Route
+                      path="/admin/tasks"
+                      element={isAdminOrMgmt ? <AdminTasksPage /> : <Navigate to="/" replace />}
+                    />
+                    <Route
+                      path="/admin/activity-logs"
+                      element={isAdminOrMgmt ? <AdminActivityLogsPage /> : <Navigate to="/" replace />}
+                    />
+                    <Route
+                      path="/settings"
+                      element={isAdminOrMgmt ? <SettingsPage /> : <Navigate to="/" replace />}
+                    />
 
-                  {/* Management & Goal Owner Routes */}
-                  {!isEmployee && (
-                    <>
-                      <Route path="/goals" element={<GoalsPage />} />
-                      <Route path="/activities" element={<ActivitiesPage />} />
-                      <Route path="/hiring" element={<HiringPage />} />
-                      <Route path="/expansion" element={<ExpansionPage />} />
-                      <Route path="/products" element={<ProductsPage />} />
-                      <Route path="/reviews" element={<ReviewsPage />} />
-                      <Route path="/reports" element={<ReportsPage />} />
-                    </>
-                  )}
+                    {/* Management & Goal Tracking Routes */}
+                    <Route
+                      path="/goals"
+                      element={!isEmployee ? <GoalsPage /> : <Navigate to="/" replace />}
+                    />
+                    <Route
+                      path="/activities"
+                      element={!isEmployee ? <ActivitiesPage /> : <Navigate to="/" replace />}
+                    />
+                    <Route
+                      path="/hiring"
+                      element={!isEmployee ? <HiringPage /> : <Navigate to="/" replace />}
+                    />
+                    <Route
+                      path="/expansion"
+                      element={!isEmployee ? <ExpansionPage /> : <Navigate to="/" replace />}
+                    />
+                    <Route
+                      path="/products"
+                      element={!isEmployee ? <ProductsPage /> : <Navigate to="/" replace />}
+                    />
+                    <Route
+                      path="/reviews"
+                      element={!isEmployee ? <ReviewsPage /> : <Navigate to="/" replace />}
+                    />
+                    <Route
+                      path="/reports"
+                      element={!isEmployee ? <ReportsPage /> : <Navigate to="/" replace />}
+                    />
 
-                  {/* Fallback */}
-                  <Route path="*" element={<Navigate to="/" replace />} />
-                </Routes>
-              </AppLayout>
-            ) : (
-              <Navigate to="/login" replace />
-            )
-          }
-        />
-      </Routes>
-    </BrowserRouter>
+                    {/* Fallback */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                  </Routes>
+                </AppLayout>
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
+        </Routes>
+      </BrowserRouter>
+    </ErrorBoundary>
   );
 };
 

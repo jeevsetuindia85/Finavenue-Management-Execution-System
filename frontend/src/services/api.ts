@@ -330,8 +330,14 @@ export const api = {
     return res.data;
   },
   async getTeamStats(): Promise<TeamMemberStats[]> {
-    const res = await apiClient.get<TeamMemberStats[]>('/users/team-stats');
-    return res.data;
+    const res = await apiClient.get<any>('/users/team-stats');
+    if (Array.isArray(res.data)) {
+      return res.data;
+    }
+    if (res.data && Array.isArray(res.data.employees)) {
+      return res.data.employees;
+    }
+    return [];
   },
   async adminCreateEmployee(data: {
     email: string;

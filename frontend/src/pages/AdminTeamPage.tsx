@@ -69,11 +69,22 @@ export const AdminTeamPage: React.FC = () => {
     try {
       setLoading(true);
       const [statsRes, usersRes] = await Promise.all([
-        api.getTeamStats(),
-        api.getUsers()
+        api.getTeamStats().catch((e) => {
+          console.warn('getTeamStats error:', e);
+          return [];
+        }),
+        api.getUsers().catch((e) => {
+          console.warn('getUsers error:', e);
+          return [];
+        })
       ]);
-      setTeamStats(statsRes);
-      setUsers(usersRes);
+      const list = Array.isArray(statsRes)
+        ? statsRes
+        : (statsRes as any)?.employees && Array.isArray((statsRes as any).employees)
+        ? (statsRes as any).employees
+        : [];
+      setTeamStats(list);
+      setUsers(Array.isArray(usersRes) ? usersRes : []);
     } catch (err) {
       console.error('Failed to load team data:', err);
     } finally {
@@ -87,7 +98,8 @@ export const AdminTeamPage: React.FC = () => {
 
   // Auto-generate employee ID
   const openAddModal = () => {
-    const nextNum = (teamStats.length + 1).toString().padStart(3, '0');
+    const list = Array.isArray(teamStats) ? teamStats : [];
+    const nextNum = (list.length + 1).toString().padStart(3, '0');
     setAddForm({
       full_name: '',
       email: '',
@@ -200,7 +212,9 @@ export const AdminTeamPage: React.FC = () => {
   };
 
   // Filtered members
-  const filtered = teamStats.filter((m) => {
+  const statsList = Array.isArray(teamStats) ? teamStats : [];
+  const filtered = statsList.filter((m) => {
+    if (!m) return false;
     const matchesStatus =
       statusFilter === 'all'
         ? true
@@ -208,21 +222,28 @@ export const AdminTeamPage: React.FC = () => {
         ? m.status === 'active'
         : m.status === 'suspended';
 
+    const q = (searchQuery || '').toLowerCase();
+    const fullName = (m.full_name || (m as any).name || '').toLowerCase();
+    const email = (m.email || '').toLowerCase();
+    const empId = (m.employee_id || '').toLowerCase();
+    const dept = (m.department || '').toLowerCase();
+    const desig = (m.designation || '').toLowerCase();
+
     const matchesSearch =
-      m.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      m.employee_id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (m.department && m.department.toLowerCase().includes(searchQuery.toLowerCase())) ||
-      (m.designation && m.designation.toLowerCase().includes(searchQuery.toLowerCase()));
+      fullName.includes(q) ||
+      email.includes(q) ||
+      empId.includes(q) ||
+      dept.includes(q) ||
+      desig.includes(q);
 
     return matchesStatus && matchesSearch;
   });
 
-  const totalMembers = teamStats.length;
-  const activeMembers = teamStats.filter(m => m.status === 'active').length;
-  const suspendedMembers = teamStats.filter(m => m.status === 'suspended').length;
+  const totalMembers = statsList.length;
+  const activeMembers = statsList.filter(m => m && m.status === 'active').length;
+  const suspendedMembers = statsList.filter(m => m && m.status === 'suspended').length;
   const avgProductivity = totalMembers > 0
-    ? Math.round(teamStats.reduce((acc, m) => acc + (m.productivity_pct || 0), 0) / totalMembers)
+    ? Math.round(statsList.reduce((acc, m) => acc + (m?.productivity_pct || 0), 0) / totalMembers)
     : 0;
 
   return (
@@ -363,15 +384,15 @@ export const AdminTeamPage: React.FC = () => {
                     {/* Employee ID */}
                     <td className="py-3.5 px-4 font-mono font-bold text-slate-800">
                       <span className="px-2 py-0.5 rounded bg-slate-100 border border-slate-200 text-teal-800">
-                        {member.employee_id}
+                        {member.employee_id || 'FA-EMP'}
                       </span>
                     </td>
 
                     {/* Member Info */}
                     <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900">{member.full_name}</div>
+                      <div className="font-bold text-slate-900">{member.full_name || (member as any).name || 'Member'}</div>
                       <div className="text-[11px] text-slate-500 flex items-center gap-1">
-                        {member.email}
+                        {member.email || '-'}
                       </div>
                     </td>
 
@@ -392,7 +413,7 @@ export const AdminTeamPage: React.FC = () => {
                           ? 'bg-blue-100 text-blue-800'
                           : 'bg-slate-100 text-slate-700'
                       }`}>
-                        {member.role?.replace('_', ' ')}
+                        {member.role ? member.role.replace('_', ' ') : 'Member'}
                       </span>
                     </td>
 
@@ -403,31 +424,31 @@ export const AdminTeamPage: React.FC = () => {
                           ? 'bg-emerald-100 text-emerald-800'
                           : 'bg-rose-100 text-rose-800'
                       }`}>
-                        {member.status}
+                        {member.status || 'active'}
                       </span>
                     </td>
 
                     {/* Tasks Summary */}
                     <td className="py-3.5 px-4 text-center font-mono">
                       <div className="inline-flex items-center gap-1.5 text-xs">
-                        <span className="text-slate-800 font-bold" title="Assigned">{member.assigned_count}</span>
+                        <span className="text-slate-800 font-bold" title="Assigned">{member.assigned_count ?? (member as any).total_tasks ?? 0}</span>
                         <span className="text-slate-300">/</span>
-                        <span className="text-emerald-600 font-bold" title="Completed">{member.completed_count}</span>
+                        <span className="text-emerald-600 font-bold" title="Completed">{member.completed_count ?? (member as any).completed_tasks ?? 0}</span>
                         <span className="text-slate-300">/</span>
-                        <span className="text-rose-600 font-bold" title="Overdue">{member.overdue_count}</span>
+                        <span className="text-rose-600 font-bold" title="Overdue">{member.overdue_count ?? (member as any).overdue_tasks ?? 0}</span>
                       </div>
                     </td>
 
                     {/* Productivity Rate */}
                     <td className="py-3.5 px-4 text-center">
                       <div className="inline-flex items-center gap-1">
-                        <span className="font-bold text-slate-900">{member.productivity_pct}%</span>
+                        <span className="font-bold text-slate-900">{member.productivity_pct ?? 0}%</span>
                         <div className="w-12 h-1.5 bg-slate-100 rounded-full overflow-hidden">
                           <div
                             className={`h-full rounded-full ${
-                              member.productivity_pct >= 70 ? 'bg-emerald-500' : member.productivity_pct >= 40 ? 'bg-amber-500' : 'bg-rose-500'
+                              (member.productivity_pct || 0) >= 70 ? 'bg-emerald-500' : (member.productivity_pct || 0) >= 40 ? 'bg-amber-500' : 'bg-rose-500'
                             }`}
-                            style={{ width: `${Math.min(member.productivity_pct, 100)}%` }}
+                            style={{ width: `${Math.min(member.productivity_pct || 0, 100)}%` }}
                           />
                         </div>
                       </div>

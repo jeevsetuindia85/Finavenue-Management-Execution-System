@@ -16,7 +16,8 @@ import {
   RefreshCw,
   Edit2,
   Trash2,
-  ChevronDown
+  ChevronDown,
+  UserPlus
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Activity, User as UserType } from '../types';
@@ -25,6 +26,22 @@ export const AdminTasksPage: React.FC = () => {
   const [tasks, setTasks] = useState<Activity[]>([]);
   const [users, setUsers] = useState<UserType[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Edit / Assign Task Modal
+  const [editingTask, setEditingTask] = useState<Activity | null>(null);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    description: '',
+    assigned_to: '',
+    priority: 'medium' as 'low' | 'medium' | 'high' | 'critical',
+    due_date: '',
+    status: 'assigned',
+    target_frequency: 'weekly' as 'daily' | 'weekly' | 'fortnightly' | 'monthly' | 'milestone',
+    target_quantity: 1,
+    module: 'general' as 'hiring' | 'expansion' | 'product' | 'general'
+  });
+  const [editLoading, setEditLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   // Filters
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -124,6 +141,62 @@ export const AdminTasksPage: React.FC = () => {
       alert(err.response?.data?.detail || 'Failed to review task.');
     } finally {
       setReviewLoading(false);
+    }
+  };
+
+  const openEditModal = (task: Activity) => {
+    setEditingTask(task);
+    setEditForm({
+      name: task.name || '',
+      description: task.description || '',
+      assigned_to: task.assigned_to || '',
+      priority: task.priority || 'medium',
+      due_date: task.due_date ? task.due_date.split('T')[0] : '',
+      status: task.status || 'assigned',
+      target_frequency: (task.target_frequency as any) || 'weekly',
+      target_quantity: task.target_quantity || 1,
+      module: (task.module as any) || 'general'
+    });
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTask) return;
+    try {
+      setEditLoading(true);
+      await api.updateActivity(editingTask.id, {
+        name: editForm.name,
+        description: editForm.description,
+        assigned_to: editForm.assigned_to || (null as any),
+        priority: editForm.priority,
+        due_date: editForm.due_date || (null as any),
+        status: editForm.status as any,
+        target_frequency: editForm.target_frequency,
+        target_quantity: Number(editForm.target_quantity) || 1,
+        module: editForm.module
+      });
+      setEditingTask(null);
+      await fetchData();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to update task.');
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string, taskName: string) => {
+    if (!window.confirm(`Are you sure you want to delete task "${taskName}"?`)) return;
+    try {
+      setDeletingId(taskId);
+      await api.deleteActivity(taskId);
+      if (editingTask?.id === taskId) {
+        setEditingTask(null);
+      }
+      await fetchData();
+    } catch (err: any) {
+      alert(err.response?.data?.detail || 'Failed to delete task.');
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -351,14 +424,30 @@ export const AdminTasksPage: React.FC = () => {
                     {/* Assigned Employee */}
                     <td className="py-3.5 px-4">
                       {task.assignee ? (
-                        <div>
-                          <div className="font-semibold text-slate-800">{task.assignee.full_name}</div>
-                          <span className="text-[10px] font-mono text-teal-700 font-bold bg-teal-50 px-1 py-0.2 rounded border border-teal-100">
-                            {task.assignee.employee_id || 'FA-EMP'}
-                          </span>
+                        <div className="flex items-center justify-between group">
+                          <div>
+                            <div className="font-semibold text-slate-800">{task.assignee.full_name}</div>
+                            <span className="text-[10px] font-mono text-teal-700 font-bold bg-teal-50 px-1 py-0.2 rounded border border-teal-100">
+                              {task.assignee.employee_id || 'FA-EMP'}
+                            </span>
+                          </div>
+                          <button
+                            onClick={() => openEditModal(task)}
+                            className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-teal-700 hover:bg-slate-100 rounded transition ml-2"
+                            title="Reassign Task"
+                          >
+                            <Edit2 size={12} />
+                          </button>
                         </div>
                       ) : (
-                        <span className="text-slate-400 italic">Unassigned</span>
+                        <button
+                          onClick={() => openEditModal(task)}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold text-teal-700 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-lg shadow-2xs transition"
+                          title="Click to Assign Employee"
+                        >
+                          <UserPlus size={12} />
+                          Assign Member
+                        </button>
                       )}
                     </td>
 
@@ -400,21 +489,21 @@ export const AdminTasksPage: React.FC = () => {
 
                     {/* Review / Actions */}
                     <td className="py-3.5 px-4 text-right">
-                      {task.status === 'under_review' ? (
-                        <button
-                          onClick={() => {
-                            setReviewTask(task);
-                            setReviewAction('approve');
-                            setAdminFeedback('');
-                          }}
-                          className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-1.5 ml-auto transition"
-                        >
-                          <FileCheck2 size={13} />
-                          Review Work
-                        </button>
-                      ) : (
-                        <div className="inline-flex items-center gap-1">
-                          {task.status !== 'completed' && (
+                      <div className="inline-flex items-center gap-1 justify-end">
+                        {task.status === 'under_review' ? (
+                          <button
+                            onClick={() => {
+                              setReviewTask(task);
+                              setReviewAction('approve');
+                              setAdminFeedback('');
+                            }}
+                            className="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold shadow-xs flex items-center gap-1 transition mr-1"
+                          >
+                            <FileCheck2 size={13} />
+                            Review
+                          </button>
+                        ) : (
+                          task.status !== 'completed' && (
                             <button
                               onClick={() => {
                                 setReviewTask(task);
@@ -426,9 +515,28 @@ export const AdminTasksPage: React.FC = () => {
                             >
                               <CheckCircle2 size={14} />
                             </button>
-                          )}
-                        </div>
-                      )}
+                          )
+                        )}
+
+                        {/* Edit & Assign Button */}
+                        <button
+                          onClick={() => openEditModal(task)}
+                          className="p-1.5 text-slate-500 hover:text-teal-700 hover:bg-teal-50 rounded-lg transition"
+                          title="Edit & Assign Task"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+
+                        {/* Delete Task Button */}
+                        <button
+                          onClick={() => handleDeleteTask(task.id, task.name)}
+                          disabled={deletingId === task.id}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition disabled:opacity-50"
+                          title="Delete Task"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -693,6 +801,166 @@ export const AdminTasksPage: React.FC = () => {
                 >
                   {createLoading ? 'Assigning...' : 'Assign Task'}
                 </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit / Assign Task Modal */}
+      {editingTask && (
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <Edit2 size={16} className="text-teal-600" />
+                Edit & Assign Task: <span className="font-mono text-teal-700">{editingTask.activity_code || 'TASK'}</span>
+              </h3>
+              <button
+                onClick={() => setEditingTask(null)}
+                className="text-slate-400 hover:text-slate-600 text-lg font-bold"
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Assignee (Team Member) <span className="text-rose-500">*</span>
+                </label>
+                <select
+                  value={editForm.assigned_to}
+                  onChange={(e) => setEditForm({ ...editForm, assigned_to: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-teal-300 rounded-lg text-xs text-slate-800 font-medium focus:ring-2 focus:ring-teal-500"
+                >
+                  <option value="">— Unassigned (No employee assigned) —</option>
+                  {users.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.full_name} ({u.employee_id || 'ID'}) — {u.department || u.role}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Select an employee to allocate this task directly to their individual dashboard.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Task Title <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Instructions & Deliverable Description
+                </label>
+                <textarea
+                  rows={3}
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  placeholder="Provide instructions or updates for this task..."
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Priority
+                  </label>
+                  <select
+                    value={editForm.priority}
+                    onChange={(e) => setEditForm({ ...editForm, priority: e.target.value as any })}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Deadline (Due Date)
+                  </label>
+                  <input
+                    type="date"
+                    value={editForm.due_date}
+                    onChange={(e) => setEditForm({ ...editForm, due_date: e.target.value })}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Task Status
+                  </label>
+                  <select
+                    value={editForm.status}
+                    onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
+                  >
+                    <option value="assigned">Assigned</option>
+                    <option value="todo">Todo</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="under_review">Under Review</option>
+                    <option value="completed">Completed</option>
+                    <option value="on_hold">On Hold</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">
+                    Department / Module
+                  </label>
+                  <select
+                    value={editForm.module}
+                    onChange={(e) => setEditForm({ ...editForm, module: e.target.value as any })}
+                    className="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-800"
+                  >
+                    <option value="general">General</option>
+                    <option value="hiring">Hiring</option>
+                    <option value="expansion">Expansion</option>
+                    <option value="product">Product</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => handleDeleteTask(editingTask.id, editingTask.name)}
+                  className="px-3 py-2 text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-lg text-xs font-bold transition flex items-center gap-1.5"
+                >
+                  <Trash2 size={13} />
+                  Delete Task
+                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingTask(null)}
+                    className="px-3.5 py-2 text-slate-600 hover:bg-slate-100 rounded-lg text-xs font-semibold"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={editLoading}
+                    className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white rounded-lg text-xs font-bold transition shadow-xs disabled:opacity-50"
+                  >
+                    {editLoading ? 'Saving...' : 'Save & Assign Task'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

@@ -251,6 +251,26 @@ async def update_task(
     await db.refresh(activity)
     return activity
 
+@router.delete("/{activity_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_task(
+    activity_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    if not is_admin(current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Access denied: Only administrators can delete tasks."
+        )
+    result = await db.execute(select(Activity).where(Activity.id == activity_id))
+    activity = result.scalar_one_or_none()
+    if not activity:
+        raise HTTPException(status_code=404, detail="Task not found")
+        
+    await db.delete(activity)
+    await db.commit()
+    return None
+
 @router.post("/{activity_id}/submit")
 async def submit_task_for_review(
     activity_id: str,

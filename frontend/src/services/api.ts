@@ -119,6 +119,9 @@ export const api = {
     const res = await apiClient.patch<Activity>(`/activities/${id}`, data);
     return res.data;
   },
+  async deleteActivity(id: string): Promise<void> {
+    await apiClient.delete(`/activities/${id}`);
+  },
   async getActivityUpdates(id: string) {
     const res = await apiClient.get(`/activities/${id}/updates`);
     return res.data;

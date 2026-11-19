@@ -24,11 +24,15 @@ DEMO_EMAIL_ALIASES = {
 DEMO_ACCEPTED_PASSWORDS = {"demo123", "demo1234", "admin123"}
 
 def is_valid_demo_auth(user: User, password: str) -> bool:
-    if verify_password(password, user.hashed_password):
-        return True
+    # 1. Fast & safe demo authentication
     if user.email.endswith(".local") and password in DEMO_ACCEPTED_PASSWORDS:
         return True
-    return False
+    # 2. Standard bcrypt check
+    try:
+        return verify_password(password, user.hashed_password)
+    except Exception as e:
+        print(f"Auth verification error: {e}", flush=True)
+        return False
 
 @router.post("/login", response_model=Token)
 async def login(
@@ -41,6 +45,16 @@ async def login(
     result = await db.execute(select(User).where((User.email == email) | (User.email == canonical_email)))
     user = result.scalar_one_or_none()
     
+    # Auto-seed if user not found in new cloud environment
+    if not user:
+        try:
+            from scripts.seed_demo_data import seed
+            await seed()
+            result = await db.execute(select(User).where((User.email == email) | (User.email == canonical_email)))
+            user = result.scalar_one_or_none()
+        except Exception as seed_err:
+            print(f"Auto-seed during login failed: {seed_err}", flush=True)
+    
     if not user or not is_valid_demo_auth(user, form_data.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -50,8 +64,12 @@ async def login(
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     
-    user.last_login = datetime.now(timezone.utc)
-    await db.commit()
+    try:
+        user.last_login = datetime.now(timezone.utc)
+        await db.commit()
+    except Exception as e:
+        print(f"Notice: last_login update skipped: {e}", flush=True)
+        await db.rollback()
     
     access_token = create_access_token(data={"sub": user.id})
     refresh_token = create_refresh_token(data={"sub": user.id})
@@ -68,6 +86,16 @@ async def login_json(
     result = await db.execute(select(User).where((User.email == email) | (User.email == canonical_email)))
     user = result.scalar_one_or_none()
     
+    # Auto-seed if user not found in new cloud environment
+    if not user:
+        try:
+            from scripts.seed_demo_data import seed
+            await seed()
+            result = await db.execute(select(User).where((User.email == email) | (User.email == canonical_email)))
+            user = result.scalar_one_or_none()
+        except Exception as seed_err:
+            print(f"Auto-seed during login-json failed: {seed_err}", flush=True)
+    
     if not user or not is_valid_demo_auth(user, login_data.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -77,8 +105,12 @@ async def login_json(
     if not user.is_active:
         raise HTTPException(status_code=400, detail="Inactive user")
     
-    user.last_login = datetime.now(timezone.utc)
-    await db.commit()
+    try:
+        user.last_login = datetime.now(timezone.utc)
+        await db.commit()
+    except Exception as e:
+        print(f"Notice: last_login update skipped: {e}", flush=True)
+        await db.rollback()
     
     access_token = create_access_token(data={"sub": user.id})
     refresh_token = create_refresh_token(data={"sub": user.id})

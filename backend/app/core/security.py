@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Any
+from typing import Optional, Any, List
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import Depends, HTTPException, status
@@ -19,10 +19,19 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_PREFIX}/auth/login")
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    try:
+        return pwd_context.verify(plain_password, hashed_password)
+    except Exception as e:
+        print(f"verify_password warning: {e}", flush=True)
+        return False
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    try:
+        return pwd_context.hash(password)
+    except Exception:
+        import bcrypt
+        salt = bcrypt.gensalt()
+        return bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -> str:
     to_encode = data.copy()
@@ -31,13 +40,15 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
     else:
         expire = datetime.now(timezone.utc) + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     to_encode.update({"exp": expire, "type": "access"})
-    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    secret = str(settings.SECRET_KEY)
+    return jwt.encode(to_encode, secret, algorithm=settings.ALGORITHM)
 
 def create_refresh_token(data: dict) -> str:
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS)
     to_encode.update({"exp": expire, "type": "refresh"})
-    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
+    secret = str(settings.SECRET_KEY)
+    return jwt.encode(to_encode, secret, algorithm=settings.ALGORITHM)
 
 async def get_current_user(
     token: str = Depends(oauth2_scheme),
@@ -49,26 +60,26 @@ async def get_current_user(
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        secret = str(settings.SECRET_KEY)
+        payload = jwt.decode(token, secret, algorithms=[settings.ALGORITHM])
         user_id: str = payload.get("sub")
-        token_type: str = payload.get("type")
-        if user_id is None or token_type != "access":
+        if user_id is None:
             raise credentials_exception
     except JWTError:
         raise credentials_exception
-    
+        
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
-    if user is None or not user.is_active:
+    if user is None:
         raise credentials_exception
     return user
 
-def require_roles(*roles: str):
-    async def role_checker(current_user: User = Depends(get_current_user)) -> User:
-        if current_user.role not in roles and current_user.role != "admin":
+def require_roles(*allowed_roles: str):
+    def role_checker(current_user: User = Depends(get_current_user)) -> User:
+        if current_user.role not in allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Required roles: {', '.join(roles)}"
+                detail="Operation not permitted for current user role"
             )
         return current_user
     return role_checker

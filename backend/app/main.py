@@ -60,6 +60,16 @@ app.include_router(audit.router, prefix=settings.API_V1_PREFIX)
 os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=settings.UPLOAD_DIR), name="uploads")
 
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
+    error_trace = traceback.format_exc()
+    print("UNHANDLED SERVER ERROR:", error_trace, flush=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": f"Internal Server Error: {str(exc)}"}
+    )
+
 @app.get("/health")
 async def health():
     return {"status": "healthy", "service": "ExecFlow Backend API", "version": settings.APP_VERSION}

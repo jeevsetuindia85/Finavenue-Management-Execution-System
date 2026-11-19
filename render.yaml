@@ -5,9 +5,11 @@ services:
     plan: free
     region: oregon
     buildCommand: "pip install --upgrade pip setuptools wheel && pip install -r backend/requirements.txt"
-    startCommand: "cd backend && python run.py"
+    startCommand: "python backend/run.py"
     envVars:
       - key: PYTHON_VERSION
         value: 3.11.9
+      - key: PYTHONPATH
+        value: backend
       - key: SECRET_KEY
         generateValue: true

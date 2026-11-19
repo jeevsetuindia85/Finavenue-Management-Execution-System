@@ -22,17 +22,11 @@ DEMO_EMAIL_ALIASES = {
     "ceo.lead@mes.local": "ceo@mes.local",
 }
 
-DEMO_ACCEPTED_PASSWORDS = {"demo123", "demo1234", "admin123"}
-
-def is_valid_demo_auth(user: User, password: str) -> bool:
-    # 1. Fast & safe demo authentication
-    if user.email.endswith(".local") and password in DEMO_ACCEPTED_PASSWORDS:
-        return True
-    # 2. Standard bcrypt check
+def is_valid_user_password(user: User, password: str) -> bool:
     try:
         return verify_password(password, user.hashed_password)
     except Exception as e:
-        print(f"Auth verification error: {e}", flush=True)
+        print(f"Password verification error: {e}", flush=True)
         return False
 
 async def log_session_and_audit(db: AsyncSession, user: User, request: Request, action: str = "login"):
@@ -107,7 +101,7 @@ async def login(
             detail="Account temporarily locked due to failed attempts. Please try again later."
         )
     
-    if not is_valid_demo_auth(user, form_data.password):
+    if not is_valid_user_password(user, form_data.password):
         user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
         if user.failed_login_attempts >= 5:
             user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)
@@ -194,7 +188,7 @@ async def login_json(
             detail="Account temporarily locked due to repeated failed attempts. Please try again in 15 minutes."
         )
     
-    if not is_valid_demo_auth(user, login_data.password):
+    if not is_valid_user_password(user, login_data.password):
         user.failed_login_attempts = (user.failed_login_attempts or 0) + 1
         if user.failed_login_attempts >= 5:
             user.locked_until = datetime.now(timezone.utc) + timedelta(minutes=15)

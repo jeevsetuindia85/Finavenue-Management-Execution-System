@@ -9,8 +9,7 @@ import {
   LogOut,
   CheckCircle2,
   AlertTriangle,
-  RefreshCw,
-  Sparkles
+  RefreshCw
 } from 'lucide-react';
 import { User, Notification } from '../../types';
 import { api } from '../../services/api';
@@ -26,18 +25,7 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onUserSwitch }) => 
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
-  const [showPersonaMenu, setShowPersonaMenu] = useState(false);
   const [isSyncing, setIsSyncing] = useState(false);
-
-  const demoPersonas = [
-    { email: 'admin@mes.local', role: 'admin', name: 'System Admin (FA-ADM-001)', title: 'Super Admin — Full Control' },
-    { email: 'ceo@mes.local', role: 'management', name: 'Rajesh Mehta (FA-EXEC-001)', title: 'CEO / Executive Management' },
-    { email: 'hr@mes.local', role: 'goal_owner', name: 'Priya Sharma (FA-HR-001)', title: 'Head of Talent (Goal 01)' },
-    { email: 'analyst1@mes.local', role: 'team_member', name: 'Vikram Joshi (FA-EMP-001)', title: 'Financial Analyst (Employee)' },
-    { email: 'recruiter@mes.local', role: 'team_member', name: 'Ananya Iyer (FA-EMP-002)', title: 'HR Recruiter (Employee)' },
-    { email: 'bd@mes.local', role: 'goal_owner', name: 'Amit Patel (FA-BD-001)', title: 'Head of BD (Goal 02)' },
-    { email: 'product@mes.local', role: 'goal_owner', name: 'Sneha Reddy (FA-PRD-001)', title: 'Head of Product (Goal 03)' },
-  ];
 
   const fetchNotifs = async () => {
     try {
@@ -55,19 +43,6 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onUserSwitch }) => 
       fetchNotifs();
     }
   }, [currentUser]);
-
-  const handleSwitchPersona = async (email: string) => {
-    try {
-      const password = email === 'admin@mes.local' ? 'admin123' : 'demo1234';
-      await api.loginJson(email, password);
-      const user = await api.getCurrentUser();
-      onUserSwitch(user);
-      setShowPersonaMenu(false);
-      window.location.reload();
-    } catch (err) {
-      console.error('Failed to switch persona:', err);
-    }
-  };
 
   const handleMarkAllRead = async () => {
     try {
@@ -227,44 +202,6 @@ export const Header: React.FC<HeaderProps> = ({ currentUser, onUserSwitch }) => 
             </span>
           </div>
         )}
-
-        {/* Role Switcher Pill */}
-        <div className="relative">
-          <button
-            onClick={() => setShowPersonaMenu(!showPersonaMenu)}
-            className="flex items-center gap-2 pl-2 pr-3 py-1 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition text-xs font-medium shadow-xs"
-            title="Switch Demo Role Persona"
-          >
-            <Sparkles size={13} className="text-teal-400" />
-            <span className="hidden sm:inline">Switch:</span>
-            <span className="text-teal-300 font-semibold capitalize">
-              {currentUser?.role === 'admin' ? 'Super Admin' : currentUser?.role?.replace('_', ' ') || 'Role'}
-            </span>
-          </button>
-
-          {showPersonaMenu && (
-            <div className="absolute right-0 mt-2 w-72 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-150">
-              <div className="px-3 py-1.5 border-b border-slate-100">
-                <p className="text-xs font-semibold text-slate-800">Quick Persona Switcher</p>
-                <p className="text-[11px] text-slate-400">Test platform views under different roles</p>
-              </div>
-              <div className="py-1">
-                {demoPersonas.map((p) => (
-                  <button
-                    key={p.email}
-                    onClick={() => handleSwitchPersona(p.email)}
-                    className={`w-full text-left px-3 py-2 text-xs flex flex-col hover:bg-slate-50 transition ${
-                      currentUser?.email === p.email ? 'bg-teal-50 text-teal-900 font-semibold' : 'text-slate-700'
-                    }`}
-                  >
-                    <span className="font-medium">{p.name}</span>
-                    <span className="text-[10px] text-slate-400">{p.title}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
 
         {/* Logout */}
         <button

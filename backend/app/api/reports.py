@@ -1,7 +1,7 @@
 import io
 import csv
 from datetime import date, datetime, timedelta
-from typing import Optional
+from typing import Optional, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -150,7 +150,7 @@ async def export_excel_report(
 # --- CSV EXPORT ---
 @router.get("/export/csv")
 async def export_csv_report(
-    entity: str = Query("activities", enum=["activities", "candidates", "agencies", "reviews"]),
+    entity: Literal["activities", "candidates", "agencies", "reviews"] = Query("activities"),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):

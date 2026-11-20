@@ -25,6 +25,7 @@ def run_migration(db_path: str):
     add_col_if_missing('users', 'username', "VARCHAR(100)")
     add_col_if_missing('users', 'department', "VARCHAR(100)")
     add_col_if_missing('users', 'designation', "VARCHAR(100)")
+    add_col_if_missing('users', 'job_title', "VARCHAR(100)")
     add_col_if_missing('users', 'status', "VARCHAR(30) DEFAULT 'active'")
     add_col_if_missing('users', 'permissions_json', "TEXT")
     add_col_if_missing('users', 'failed_login_attempts', "INTEGER DEFAULT 0")
@@ -68,7 +69,7 @@ def run_migration(db_path: str):
     )
     """)
 
-    # 5. Populate employee IDs and designations for existing users
+    # 5. Populate employee IDs and designations ONLY if they are not yet set
     defaults = [
         ("admin@mes.local", "FA-ADM-001", "admin", "Management", "Platform Super Admin"),
         ("ceo@mes.local", "FA-EXEC-001", "rajesh.mehta", "Executive", "Chief Executive Officer"),
@@ -76,22 +77,19 @@ def run_migration(db_path: str):
         ("bd@mes.local", "FA-BD-001", "amit.bd", "Business Development", "Head of Geographic Expansion"),
         ("product@mes.local", "FA-PRD-001", "sneha.product", "Product Management", "Head of PMS & AIF Products"),
         ("maitwayi@mes.local", "FA-COORD-001", "maitwayi.desai", "Operations", "Execution Coordinator"),
-        ("analyst1@mes.local", "FA-EMP-001", "vikram.analyst", "Research", "Senior Research Analyst"),
+        ("analyst1@mes.local", "FA-EMP-001", "vikram.analyst", "Finance", "Financial Analyst"),
         ("recruiter@mes.local", "FA-EMP-002", "ananya.recruiter", "Human Resources", "Talent Acquisition Specialist"),
     ]
     for email, emp_id, uname, dept, desig in defaults:
         cursor.execute("""
             UPDATE users 
-            SET employee_id = ?,
+            SET employee_id = COALESCE(NULLIF(employee_id, ''), ?),
                 username = COALESCE(NULLIF(username, ''), ?),
                 department = COALESCE(NULLIF(department, ''), ?),
                 designation = COALESCE(NULLIF(designation, ''), ?),
-                status = 'active',
-                is_active = 1,
-                failed_login_attempts = 0,
-                locked_until = NULL
-            WHERE email = ?
-        """, (emp_id, uname, dept, desig, email))
+                job_title = COALESCE(NULLIF(job_title, ''), ?)
+            WHERE email = ? AND (employee_id IS NULL OR employee_id = '' OR designation IS NULL OR designation = '')
+        """, (emp_id, uname, dept, desig, desig, email))
 
     conn.commit()
     conn.close()

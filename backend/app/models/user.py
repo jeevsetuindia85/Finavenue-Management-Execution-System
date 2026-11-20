@@ -31,6 +31,7 @@ class User(Base):
     status: Mapped[str] = mapped_column(String(30), default=UserStatus.ACTIVE.value, nullable=False)
     department: Mapped[str | None] = mapped_column(String(100), nullable=True)
     designation: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    job_title: Mapped[str | None] = mapped_column(String(100), nullable=True)
     phone: Mapped[str | None] = mapped_column(String(50), nullable=True)
     avatar_url: Mapped[str | None] = mapped_column(String(500), nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)

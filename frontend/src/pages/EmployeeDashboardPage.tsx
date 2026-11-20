@@ -88,7 +88,12 @@ export const EmployeeDashboardPage: React.FC = () => {
     );
   }
 
-  const user = data.user;
+  const user = data.user || (data as any).employee || {
+    employee_id: 'FA-EMP-001',
+    full_name: 'Team Member',
+    department: 'Operations',
+    designation: 'Team Member'
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-200">

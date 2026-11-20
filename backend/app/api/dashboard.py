@@ -352,16 +352,21 @@ async def get_employee_dashboard(
     
     productivity = round((completed_tasks / total_assigned * 100), 1) if total_assigned > 0 else 0.0
     
+    user_payload = {
+        "id": current_user.id,
+        "employee_id": current_user.employee_id or "FA-EMP-001",
+        "name": current_user.full_name,
+        "full_name": current_user.full_name,
+        "email": current_user.email,
+        "department": current_user.department or "Operations",
+        "designation": getattr(current_user, 'designation', None) or getattr(current_user, 'job_title', None) or "Team Member",
+        "role": current_user.role,
+        "status": getattr(current_user, 'status', 'active')
+    }
+    
     return {
-        "employee": {
-            "id": current_user.id,
-            "employee_id": current_user.employee_id or "FA-EMP-001",
-            "name": current_user.full_name,
-            "email": current_user.email,
-            "department": current_user.department or "Operations",
-            "designation": current_user.designation or current_user.job_title or "Team Member",
-            "role": current_user.role
-        },
+        "user": user_payload,
+        "employee": user_payload,
         "kpis": {
             "total_assigned": total_assigned,
             "today_tasks": today_tasks,

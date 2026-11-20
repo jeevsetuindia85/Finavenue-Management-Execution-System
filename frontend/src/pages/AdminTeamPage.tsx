@@ -64,6 +64,7 @@ export const AdminTeamPage: React.FC = () => {
     role: 'team_member'
   });
   const [editLoading, setEditLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const fetchData = async () => {
     try {
@@ -186,12 +187,45 @@ export const AdminTeamPage: React.FC = () => {
 
     try {
       setEditLoading(true);
-      await api.adminUpdateEmployee(editUser.id, {
-        full_name: editForm.full_name,
-        department: editForm.department,
-        designation: editForm.designation,
+      const updated = await api.adminUpdateEmployee(editUser.id, {
+        full_name: editForm.full_name.trim(),
+        department: editForm.department.trim(),
+        designation: editForm.designation.trim(),
         role: editForm.role as any
       });
+
+      // Optimistically update local teamStats and users state immediately
+      setTeamStats((prev) =>
+        prev.map((m) =>
+          String(m.id) === String(editUser.id)
+            ? {
+                ...m,
+                full_name: editForm.full_name.trim(),
+                name: editForm.full_name.trim(),
+                department: editForm.department.trim(),
+                designation: editForm.designation.trim(),
+                role: editForm.role
+              }
+            : m
+        )
+      );
+
+      setUsers((prev) =>
+        prev.map((u) =>
+          String(u.id) === String(editUser.id)
+            ? {
+                ...u,
+                full_name: editForm.full_name.trim(),
+                department: editForm.department.trim(),
+                designation: editForm.designation.trim(),
+                role: editForm.role as any
+              }
+            : u
+        )
+      );
+
+      setSuccessMessage(`Team member "${editForm.full_name}" details updated successfully!`);
+      setTimeout(() => setSuccessMessage(null), 5000);
       setEditUser(null);
       await fetchData();
     } catch (err: any) {
@@ -282,6 +316,22 @@ export const AdminTeamPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Success Notification */}
+      {successMessage && (
+        <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-3 rounded-xl flex items-center justify-between text-xs font-semibold shadow-xs animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>{successMessage}</span>
+          </div>
+          <button
+            onClick={() => setSuccessMessage(null)}
+            className="text-emerald-600 hover:text-emerald-800 font-bold ml-4 text-sm"
+          >
+            &times;
+          </button>
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">

@@ -76,7 +76,7 @@ async def get_team_management_stats(
             "email": u.email,
             "role": u.role,
             "department": u.department or "Operations",
-            "designation": u.designation or u.job_title or "Team Member",
+            "designation": getattr(u, 'designation', None) or getattr(u, 'job_title', None) or "Team Member",
             "status": u.status or "active",
             "total_tasks": total_tasks,
             "assigned_count": total_tasks,
@@ -192,6 +192,7 @@ async def get_user_profile(
     return user
 
 @router.patch("/{user_id}", response_model=UserOut)
+@router.put("/{user_id}", response_model=UserOut)
 async def update_employee_profile(
     user_id: str,
     user_in: UserUpdate,
@@ -210,6 +211,12 @@ async def update_employee_profile(
         raise HTTPException(status_code=404, detail="User not found")
         
     update_data = user_in.model_dump(exclude_unset=True)
+    # Ensure designation and job_title are kept in sync
+    if "designation" in update_data and "job_title" not in update_data:
+        update_data["job_title"] = update_data["designation"]
+    elif "job_title" in update_data and "designation" not in update_data:
+        update_data["designation"] = update_data["job_title"]
+
     for field, value in update_data.items():
         setattr(user, field, value)
         

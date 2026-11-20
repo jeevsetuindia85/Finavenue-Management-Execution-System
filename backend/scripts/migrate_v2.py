@@ -71,11 +71,11 @@ def run_migration(db_path: str):
 
     # 5. Populate employee IDs and designations ONLY if they are not yet set
     defaults = [
-        ("admin@mes.local", "FA-ADM-001", "admin", "Management", "Platform Super Admin"),
-        ("ceo@mes.local", "FA-EXEC-001", "rajesh.mehta", "Executive", "Chief Executive Officer"),
-        ("hr@mes.local", "FA-HR-001", "priya.hr", "Human Resources", "Head of Talent Acquisition"),
-        ("bd@mes.local", "FA-BD-001", "amit.bd", "Business Development", "Head of Geographic Expansion"),
-        ("product@mes.local", "FA-PRD-001", "sneha.product", "Product Management", "Head of PMS & AIF Products"),
+        ("admin@mes.local", "FA-ADM-001", "aditya.admin", "Management", "Platform Super Admin"),
+        ("ceo@mes.local", "FA-EXEC-001", "abhishek.ceo", "Executive", "Fund Manager"),
+        ("hr@mes.local", "FA-HR-001", "vedahai.hr", "Human Resources", "Head of Talent Acquisition"),
+        ("bd@mes.local", "FA-BD-001", "gaurav.bd", "Business Development", "Business Development Manager"),
+        ("product@mes.local", "FA-PRD-001", "mitwayayi.social", "Social Media", "Social Media"),
         ("maitwayi@mes.local", "FA-COORD-001", "maitwayi.desai", "Operations", "Execution Coordinator"),
         ("analyst1@mes.local", "FA-EMP-001", "vikram.analyst", "Finance", "Financial Analyst"),
         ("recruiter@mes.local", "FA-EMP-002", "ananya.recruiter", "Human Resources", "Talent Acquisition Specialist"),
@@ -90,6 +90,23 @@ def run_migration(db_path: str):
                 job_title = COALESCE(NULLIF(job_title, ''), ?)
             WHERE email = ? AND (employee_id IS NULL OR employee_id = '' OR designation IS NULL OR designation = '')
         """, (emp_id, uname, dept, desig, desig, email))
+
+    # 6. Upgrade old dummy names & roles to user-defined names
+    name_replacements = [
+        ("admin@mes.local", "System Admin", "Mr. Aditya"),
+        ("ceo@mes.local", "Rajesh Mehta", "Mr. Abhishek"),
+        ("hr@mes.local", "Priya Sharma", "Ms. Vedahai"),
+        ("bd@mes.local", "Amit Patel", "Mr. Gaurav"),
+        ("product@mes.local", "Sneha Reddy", "Ms. Mitwayayi"),
+        ("analyst1@mes.local", "Vikram Singh", "Vikram Joshi"),
+    ]
+    for email, old_name, new_name in name_replacements:
+        cursor.execute("UPDATE users SET full_name = ? WHERE email = ? AND full_name = ?", (new_name, email, old_name))
+
+    # Sync roles and designations if old defaults exist
+    cursor.execute("UPDATE users SET role = 'management', designation = 'Fund Manager', job_title = 'Fund Manager' WHERE email = 'ceo@mes.local' AND designation = 'Chief Executive Officer'")
+    cursor.execute("UPDATE users SET role = 'coordinator', designation = 'Business Development Manager', job_title = 'Business Development Manager' WHERE email = 'bd@mes.local' AND designation = 'Head of Geographic Expansion'")
+    cursor.execute("UPDATE users SET role = 'team_member', department = 'Social Media', designation = 'Social Media', job_title = 'Social Media' WHERE email = 'product@mes.local' AND designation = 'Head of PMS & AIF Products'")
 
     conn.commit()
     conn.close()

@@ -3,7 +3,7 @@ import json
 from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
+from sqlalchemy import select, func, and_, or_
 from typing import List, Optional, Dict, Any
 
 from app.core.database import get_db
@@ -185,7 +185,15 @@ async def get_user_profile(
             detail="Access denied: You can only view your own user profile."
         )
         
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(
+        select(User).where(
+            or_(
+                User.id == user_id,
+                User.employee_id == user_id,
+                User.email == user_id
+            )
+        )
+    )
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -205,7 +213,15 @@ async def update_employee_profile(
             detail="Access denied: Only Administrators can edit employee profiles."
         )
         
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(
+        select(User).where(
+            or_(
+                User.id == user_id,
+                User.employee_id == user_id,
+                User.email == user_id
+            )
+        )
+    )
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -249,7 +265,15 @@ async def admin_reset_password(
             detail="Access denied: Only Administrators can reset employee passwords."
         )
         
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(
+        select(User).where(
+            or_(
+                User.id == user_id,
+                User.employee_id == user_id,
+                User.email == user_id
+            )
+        )
+    )
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -284,7 +308,15 @@ async def toggle_employee_status(
             detail="Access denied: Only Administrators can modify employee account status."
         )
         
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(
+        select(User).where(
+            or_(
+                User.id == user_id,
+                User.employee_id == user_id,
+                User.email == user_id
+            )
+        )
+    )
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
@@ -320,7 +352,15 @@ async def archive_or_delete_user(
             detail="Access denied: Only Administrators can remove employee accounts."
         )
         
-    result = await db.execute(select(User).where(User.id == user_id))
+    result = await db.execute(
+        select(User).where(
+            or_(
+                User.id == user_id,
+                User.employee_id == user_id,
+                User.email == user_id
+            )
+        )
+    )
     user = result.scalar_one_or_none()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")

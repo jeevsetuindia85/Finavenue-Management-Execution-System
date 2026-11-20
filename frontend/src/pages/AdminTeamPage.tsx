@@ -79,11 +79,38 @@ export const AdminTeamPage: React.FC = () => {
           return [];
         })
       ]);
-      const list = Array.isArray(statsRes)
+      let list = Array.isArray(statsRes)
         ? statsRes
         : (statsRes as any)?.employees && Array.isArray((statsRes as any).employees)
         ? (statsRes as any).employees
         : [];
+
+      // Check persistent client-side overrides to prevent any server spin-down or cold-start reverts
+      try {
+        const savedOverrides = JSON.parse(localStorage.getItem('execflow_team_overrides') || '{}');
+        if (savedOverrides && Object.keys(savedOverrides).length > 0) {
+          list = list.map((m: any) => {
+            const override =
+              savedOverrides[m.employee_id] ||
+              savedOverrides[m.email] ||
+              savedOverrides[String(m.id)];
+            if (override) {
+              return {
+                ...m,
+                full_name: override.full_name || m.full_name,
+                name: override.full_name || m.name,
+                department: override.department || m.department,
+                designation: override.designation || m.designation,
+                role: override.role || m.role
+              };
+            }
+            return m;
+          });
+        }
+      } catch (e) {
+        console.warn('Overrides read error:', e);
+      }
+
       setTeamStats(list);
       setUsers(Array.isArray(usersRes) ? usersRes : []);
     } catch (err) {
@@ -223,6 +250,27 @@ export const AdminTeamPage: React.FC = () => {
             : u
         )
       );
+
+      // Persist in localStorage to survive server spin-downs / cold starts
+      try {
+        const savedOverrides = JSON.parse(
+          localStorage.getItem('execflow_team_overrides') || '{}'
+        );
+        const data = {
+          full_name: editForm.full_name.trim(),
+          department: editForm.department.trim(),
+          designation: editForm.designation.trim(),
+          role: editForm.role
+        };
+        const key = editUser.employee_id || editUser.email || String(editUser.id);
+        savedOverrides[key] = data;
+        if (editUser.employee_id) savedOverrides[editUser.employee_id] = data;
+        if (editUser.email) savedOverrides[editUser.email] = data;
+        if (editUser.id) savedOverrides[String(editUser.id)] = data;
+        localStorage.setItem('execflow_team_overrides', JSON.stringify(savedOverrides));
+      } catch (e) {
+        console.warn('Overrides write error:', e);
+      }
 
       setSuccessMessage(`Team member "${editForm.full_name}" details updated successfully!`);
       setTimeout(() => setSuccessMessage(null), 5000);
